@@ -19744,7 +19744,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.3';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.4';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -19846,7 +19846,7 @@
     try{ ctx = canvas.getContext('2d'); resize(); }catch(e){}
     if(groundCache && groundCache.c) groundCache.c.width = groundCache.c.height = 0;
     groundCache = null;
-    atlasCuts.clear(); ccLayerCache.clear(); helmBodyCache.clear(); trackCache.clear(); mirBuf = null;
+    atlasCuts.clear(); ccLayerCache.clear(); helmBodyCache.clear(); trackCache.clear(); mirBuf = null; if(typeof glacCache !== 'undefined') glacCache.clear();
     ccSig = ''; try{ ccApply(); }catch(e){}
     fillProbe();
     try{ Music.unlock(); }catch(e){}
@@ -20845,23 +20845,93 @@
     return null;
   };
 
-  // --- 8 · The Fur Feud (Astrid starts it; three endings)
+  // --- 8 · The Fur Feud, in the world (1 Oct, user's pick C: Balthazar sniffs out the clues; one ending: Astrid and
+  // Bjorn go out to dinner). Bjorn gave Astrid his best wolf fur with a note ("For you. Dinner?"); she thought he was
+  // SELLING it, paid him with a stew and made Frida a coat. Clues: the note in Astrid's barrel, a ribbon in the snow
+  // behind Bjorn's hut. Show each to the right person in an ordinary chat; then tell Astrid.
+  Object.assign(ITEMS, {
+    feud_note:   { name: "Bjorn's Note", icon: 'item_note', desc: 'Written in very large letters: "For you. Dinner?" Under it, in Astrid\'s hand: "1 wolf fur. Paid: 1 stew."' },
+    feud_ribbon: { name: 'A Blue Ribbon', icon: 'item_blue_ribbon', desc: 'Tied into a bow by enormous fingers. A little tag: "For A."' },
+  });
+  const pigHere = () => !!(companion && activePet() === 'balthazar');
+  const feudQ = () => quests.furfeud && quests.furfeud.state === 'active' ? quests.furfeud : null;
+  QUEST_INFO.furfeud.goal = q => {
+    if(q.state === 'done') return 'Astrid and Bjorn went out to dinner. Bjorn wore a comb.';
+    if(q.noteShown && q.ribbonShown) return 'You know everything. Tell Astrid.';
+    const left = [!q.noteShown && (has('feud_note') ? 'show the note to the right person' : "search Astrid's house"), !q.ribbonShown && (has('feud_ribbon') ? 'show the ribbon to the right person' : "look behind Bjorn's hut")].filter(Boolean);
+    return 'Bjorn only says "HM." to Astrid now. Find out why: ' + left.join('; ') + '.';
+  };
   const _astridTalk = SHOPS.astrid.talk || (() => []);
   SHOPS.astrid.talk = (npc, S) => { const out = _astridTalk(npc, S), q = quests.furfeud;
-    const go = { label: q ? 'Let me look into it again.' : 'What happened with Bjorn?', onChoose(){
-      if(!q){ quests.furfeud = { state: 'active' }; saveQuests(); spliceNext(S("He's not talking to me. Well. He says HM. In capitals. Since I made Frida that coat."),
-        questPopupPage('furfeud', ['Ask everyone what happened, and look around.', 'Show each clue to the person it exposes.', 'Then choose how it ends.'], () => {})); }
-      else spliceNext(S("Please. Sort it out. The HM-ing is getting louder."));
-      fqAfter('feud', i => { const qq = quests.furfeud; qq.pick = i.ending; saveQuests(); },
-        () => { const qq = quests.furfeud; if(qq.pick && qq.state !== 'done'){ qq.state = 'done'; qq.ending = qq.pick; saveQuests(); feudDone(qq); } }); } };
-    if(!q || q.state === 'active') out.unshift(go);
+    if(!q) out.unshift({ label: 'What happened with Bjorn?', onChoose(){ spliceNext(
+      S("He's not talking to me. Well. He says HM. In capitals. Since I made Frida that coat."),
+      S("He SOLD me that fur! Walked in, put it on my table, went red, walked out. So I paid him. With a stew. A good stew."),
+      ...(pigHere() ? [ say('Balthazar', 'pig', "Something smells off here. And it's not the stew. Let me have a sniff round. I am an excellent nose with a pig attached.") ] : []),
+      questPopupPage('furfeud', ['Find out why Bjorn only says "HM."', pigHere() ? "Balthazar has a nose for secrets: look round Astrid's house and Bjorn's hut." : "Look round Astrid's house and Bjorn's hut.", 'Show what you find to the right person.'],
+        () => { quests.furfeud = { state: 'active' }; saveQuests(); })); } });
+    else if(q.state === 'active' && q.noteShown && q.ribbonShown) out.unshift({ label: 'Bjorn wanted to take you to dinner.', onChoose(){ spliceNext(
+      S("I know. I KNOW. The note. The ribbon. The going red. I thought he had a rash."),
+      narrate('Astrid takes off her apron, puts it back on, takes it off again, and marches out into the snow.'),
+      narrate('A door. A very long "HM." Then, for the first time anyone in Rimewick can remember, Bjorn laughs.'),
+      { ...narrate('That evening Astrid and Bjorn go out to dinner at Hulda\'s. Bjorn has combed his beard. Hulda serves fish soup. Nobody minds.'), onShow(){ feudDone(q); } }); } });
+    out.push(...feudShow('npc_astrid', S));
     return out; };
-  SHOPS.astrid.discount = () => { const q = quests.furfeud; return !q || q.state !== 'done' ? 0 : q.ending === 'discount' ? 0.25 : q.ending === 'olaf' ? -0.2 : 0; };
+  const _bjornFeudTalk = SHOPS.bjorn.talk;
+  SHOPS.bjorn.talk = (npc, S) => { const out = _bjornFeudTalk(npc, S); out.push(...feudShow('npc_bjorn', S)); return out; };
+  for(const id of ['npc_frida', 'npc_tomas']){ const t = TOWN[id], prev = t.topics;
+    t.topics = (S, npc) => [...(prev ? prev(S, npc) : []), ...feudShow(id, S)]; }
+  // a clue shown to someone: right person = the truth, anyone else = a joke
+  function feudShow(who, S){
+    const q = feudQ(); if(!q) return [];
+    const out = [];
+    if(has('feud_note') && !q.noteShown) out.push({ label: "Show Bjorn's note", onChoose(){
+      if(who === 'npc_astrid'){ q.noteShown = true; saveQuests(); takeItem('feud_note');
+        spliceNext(S('"For you... dinner?" (Astrid reads it three times. Then a fourth time, upside down.)'),
+          S("He wasn't SELLING it. He was asking me OUT. And I gave him a stew and sold his present to Frida. Oh no. Oh, the poor big lump."),
+          ...(pigHere() ? [ say('Balthazar', 'pig', 'I found that in your barrel. With my mouth. You are welcome.') ] : [])); }
+      else spliceNext(S({ npc_bjorn: 'HM. (Bjorn snatches it, reads it, goes the colour of a beetroot and hands it straight back. He is not the one who needs to read it.)',
+        npc_frida: "A love letter? To me? ...Oh. 'Dinner'. From BJORN? Show Astrid. I'm not getting in the middle of that. I'm getting popcorn.",
+        npc_tomas: 'Bjorn can WRITE? ...I\'m telling everyone. Not who it\'s for, though. Who is it for? Show Astrid, it was in her barrel.' }[who] || 'Not for me.')); } });
+    if(has('feud_ribbon') && !q.ribbonShown) out.push({ label: 'Show the blue ribbon', onChoose(){
+      if(who === 'npc_bjorn'){ q.ribbonShown = true; saveQuests(); takeItem('feud_ribbon');
+        spliceNext(narrate('Bjorn looks at the ribbon. Bjorn goes red. All the way to the ears. The ears go red too.'),
+          S('Hm.'), S('...Present. For her. Fur. Ribbon. Dinner.'), S('She paid me. With stew. Hm.'),
+          ...(pigHere() ? [ say('Balthazar', 'pig', "Five words! The man said FIVE words! Someone write this down.") ] : [])); }
+      else spliceNext(S({ npc_astrid: "A ribbon. 'For A.' There are a lot of A's in Rimewick. Ask the one with fingers that big. They tied it.",
+        npc_frida: "Pretty. Not mine. My coat came without a bow. Now I feel cheated.",
+        npc_tomas: "That's Bjorn's knot! He ties his boots like that. And the dogs. And once, me." }[who] || 'Not mine.')); } });
+    return out;
+  }
+  // the clues in the world (Look): the note in Astrid's barrel, the ribbon in the snow behind Bjorn's hut
+  HOTSPOTS.push({ scene: 'fp_astrid', x: 1.6 * TILE, y: 8.8 * TILE, r: 44, label: 'Look', avail: () => !!feudQ() && !feudQ().note,
+    pages: () => { const q = feudQ(); if(!q || q.note) return null; return [
+      pigHere() ? say('Balthazar', 'pig', 'Wait. WAIT. This barrel smells of stew and heartbreak.') : narrate('A barrel of scraps. Something papery sticks out of the top.'),
+      { ...narrate(pigHere() ? 'Balthazar sticks his head in the barrel and comes up with a crumpled note in his mouth.' : 'You fish out a crumpled, stew-stained note.'), onShow(){ q.note = true; saveQuests(); grantItem('feud_note', 1); } },
+      narrate('Huge letters: "For you. Dinner?" Under it, in Astrid\'s hand: "1 wolf fur. Paid: 1 stew."') ]; } });
+  const FEUD_DIG = [20.5 * TILE, 52.7 * TILE];
+  HOTSPOTS.push({ scene: 'frostpeak', x: FEUD_DIG[0], y: FEUD_DIG[1], r: 40, label: 'Look', avail: () => !!feudQ() && !feudQ().ribbon,
+    pages: () => { const q = feudQ(); if(!q || q.ribbon) return null; return [
+      pigHere() ? say('Balthazar', 'pig', 'Here. Under the snow. Something that smells of nervous Bjorn. Stand back, I am going in.') : narrate('A little heap of snow behind the hut. Something blue peeks out.'),
+      { ...narrate(pigHere() ? 'Balthazar digs like a furious little plough and surfaces with a blue ribbon on his snout.' : 'You dig and pull out a blue ribbon.'), onShow(){ q.ribbon = true; saveQuests(); grantItem('feud_ribbon', 1); } },
+      narrate('Tied in a bow by enormous fingers. A tag: "For A." He must have dropped it on his way to her. Or thrown it. In a sulk.') ]; } });
+  // a small snow heap with a blue ribbon loop and tail poking out (pixel rows, lit from the top-left)
+  const FEUD_HEAP = [[9, 4], [6, 10], [4, 14], [3, 16], [2, 18], [1, 20], [1, 20], [0, 22], [0, 22], [1, 20]];
+  SCENES.frostpeak.decor.push({ row: FEUD_DIG[1] / TILE, worldX: FEUD_DIG[0] - 12, worldY: FEUD_DIG[1] - 14, w: 24, h: 16, draw(sx, sy){
+    const q = feudQ(); if(!q || q.ribbon) return;
+    ctx.fillStyle = 'rgba(70,90,130,.22)'; ctx.fillRect(sx + 2, sy + 13, 22, 2);
+    FEUD_HEAP.forEach(([x, w], y) => { ctx.fillStyle = y > 7 ? '#b6c6dc' : '#e6eef8'; ctx.fillRect(sx + x, sy + 3 + y, w, 1);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(sx + x + 1, sy + 3 + y, Math.max(1, (w >> 1) - 2), 1);
+      ctx.fillStyle = '#c4d2e6'; ctx.fillRect(sx + x + w - 2, sy + 3 + y, 2, 1); });
+    ctx.fillStyle = '#23468e'; ctx.fillRect(sx + 13, sy + 1, 4, 1); ctx.fillRect(sx + 12, sy + 2, 1, 2); ctx.fillRect(sx + 17, sy + 2, 1, 2); ctx.fillRect(sx + 13, sy + 4, 1, 1);
+    ctx.fillStyle = '#3f6fcc'; ctx.fillRect(sx + 13, sy + 2, 4, 2); ctx.fillStyle = '#7da4ec'; ctx.fillRect(sx + 14, sy + 2, 1, 1);
+    ctx.fillStyle = '#e8eef8'; ctx.fillRect(sx + 14, sy + 3, 2, 1);
+    ctx.fillStyle = '#3f6fcc'; ctx.fillRect(sx + 18, sy + 7, 3, 1); ctx.fillRect(sx + 20, sy + 8, 2, 1); ctx.fillStyle = '#23468e'; ctx.fillRect(sx + 21, sy + 9, 1, 1); } });
+  SHOPS.astrid.discount = () => { const q = quests.furfeud; return q && q.state === 'done' && q.ending === 'dinner' ? 0.1 : 0; };
   function feudDone(q){
-    const E = { coat: ['Astrid makes Bjorn his own coat. He says "Hm." She says yes to dinner.', { item: 'fur_coat', text: "Astrid's Fur Coat (very warm)" }],
-                discount: ['Astrid makes it up to Bjorn with a new pelt. And you get 25% off at her shop.', { icon: 'coin', text: '+20 copper' }],
-                olaf: ['You sold the coat to Olaf yourself. Bjorn and Astrid both hate you now. Their prices went up.', { icon: 'coin', text: '+45 copper' }] }[q.ending];
-    queuePopup({ kind: 'done', title: QUEST_INFO.furfeud.title, rows: E, onClose(){ if(q.ending === 'coat') grantItem('fur_coat', 1); else addCoins(q.ending === 'olaf' ? 45 : 20); } });
+    q.state = 'done'; q.ending = 'dinner'; saveQuests();
+    queuePopup({ kind: 'done', title: QUEST_INFO.furfeud.title, rows: ['Astrid and Bjorn went out to dinner. Bjorn wore a comb.',
+      { item: 'fur_coat', text: "Astrid's Fur Coat: she made you one from the leftovers (very warm)" }, '10% off at Astrid\'s, forever. She says.'],
+      onClose(){ grantItem('fur_coat', 1); } });
   }
 
   // --- 10 · The Bell of Rimewick (after the feast; Gunnar's hoist; the bell in the lake ice -> forge -> the tower)
@@ -21472,6 +21542,70 @@
   // Rimewick points the way (user: residents say where to go; the glacier is dangerous)
   TOWN.npc_hulda && TOWN.npc_hulda.lines.push("Don't go west onto the glacier. Wolves, wisps, and a hermit called Hallvard. The hermit's the worst. He borrows salt and never gives it back.");
   TOWN.npc_bjorn && TOWN.npc_bjorn.lines.push("The glacier, west of the upper terrace. Best wolf pelts in the world, if you come back with your own skin still on.");
+
+  // ---------- 1 Oct (glacier pick panel: camp YES, frozen YES, sculptures YES): Hallvard's camp, things frozen in the
+  // ice, and his ice statues of Rimewick (carved badly). Runtime decor from atlas pieces; each has a Look.
+  var glacCache = new Map();   // tinted statues (cleared by recoverCanvases)
+  { const G = SCENES.fp_glacier, T = TILE, CX = 9 * T, FY = 6 * T + 24, solid = (c, r) => { (G.solid || (G.solid = new Set())).add(c + ',' + r); G.fine = null; };
+    const look = (x, y, r, pages) => HOTSPOTS.push({ scene: 'fp_glacier', x, y, r, label: 'Look', avail: () => true, pages });
+    const pigOr = (pig, plain) => companion && activePet() === 'balthazar' ? [ narrate(plain), say('Balthazar', 'pig', pig) ] : [ narrate(plain) ];
+    // the camp: a pot on the fire, the bedroll, the salt barrel, a drying rack with fish, an old sled
+    { const pot = animProp('prop_cauldron_', 2, 420, 10.5 * T, FY - 1, 24, 24); pot.row = 7 - 4 / T + 0.01; G.decor.push(pot); }   // drawn just after the fire
+    G.decor.push(pixelProp('ds_p_bedroll', CX - 118, 6 * T + 26, 38, 62));
+    G.decor.push(pixelProp('fpp_barrel', CX - 30, 6 * T + 30, 28, 38)); solid(8, 6);
+    G.decor.push({ row: (FY + 2) / T, worldX: CX + 74, worldY: FY - 48, w: 62, h: 50, draw(sx, sy){
+      const bx = sx + 2, by = sy + 48;
+      ctx.fillStyle = '#46301c'; ctx.fillRect(bx + 2, by - 46, 3, 46); ctx.fillRect(bx + 54, by - 46, 3, 46);
+      ctx.fillStyle = '#583c24'; ctx.fillRect(bx, by - 46, 59, 3); ctx.fillStyle = '#7a5634'; ctx.fillRect(bx, by - 46, 59, 1);
+      ['item_fish_frostpike', 'item_fish_trout', 'item_fish_frostpike'].forEach((f, k) => { const fx = bx + 14 + k * 16;
+        ctx.fillStyle = '#3c2c1e'; ctx.fillRect(fx, by - 43, 1, 5);
+        ctx.save(); ctx.translate(fx + 1, by - 38); ctx.rotate(Math.PI / 2 + (k === 1 ? 0.05 : -0.04) * Math.sin(clockNow / 900 + k)); drawSprite(f, 0, -6, 29, 12); ctx.restore(); });
+      ctx.fillStyle = 'rgba(60,80,120,.25)'; ctx.fillRect(bx, by - 1, 60, 2); } });
+    solid(11, 6); solid(12, 6);
+    G.decor.push(pixelProp('race_sled', 3.7 * T, 7.8 * T, 30, 44)); solid(3, 7);
+    look(CX - 118, 6.6 * T, 30, () => pigOr("Wolf. Wolf. Wolf. Smells like three wolves had a sleepover and lost.", 'A bedroll made of three wolf skins and a great deal of optimism.'));
+    look(CX - 30, 6.7 * T, 26, () => [ narrate('A barrel marked SALT. It is full to the brim.'), narrate("Hulda says Hallvard borrows salt and never gives it back. Well. Now you know where Rimewick's salt goes.") ]);
+    look(CX + 104, 6.6 * T, 34, () => pigOr("Fish jerky. Fish JERKY. Ask him if he takes payment in charm.", 'Three fish hang on the rack, drying in the wind. They stare at you. You look away first.'));
+    look(3.7 * T, 7.5 * T, 28, () => [ narrate('An old sled. One runner is tied on with string.'), narrate('Hallvard says it still goes. Downhill. Only downhill. Very fast.') ]);
+    // things frozen into the ice: a block of clear glacier ice with the object inside (3 now; a 4th from round 2)
+    const FROZEN = [
+      { at: [16, 5.7], item: 'item_fish_frostpike', w: 29, h: 12, look: () => pigOr("Sushi on a stick. A very cold, very big stick.", 'A frostpike, frozen mid-yawn. It looks like it was about to say something. Probably "oh no".') },
+      { at: [20, 5.9], item: 'item_boot_left', w: 32, h: 26, look: () => [ narrate('One boot, frozen solid. The foot is still in it.'), narrate('Not really. Probably. You decide not to check.') ] },
+      { at: [6.2, 9.4], item: 'item_iron_sword', w: 27, h: 27, look: () => [ narrate('A sword, frozen point-down in the ice. Someone was very sure of himself.'), narrate('Someone is now very much part of the glacier.') ] },
+    ];
+    const blockPath = (x, y, w, h) => { ctx.beginPath(); ctx.moveTo(x + 4, y + 10); ctx.lineTo(x + 14, y + 2); ctx.lineTo(x + w - 6, y + 4); ctx.lineTo(x + w - 2, y + 16);
+      ctx.lineTo(x + w - 4, y + h - 4); ctx.lineTo(x + 6, y + h - 2); ctx.lineTo(x + 2, y + h - 14); ctx.closePath(); };
+    for(const f of FROZEN){ const bx = f.at[0] * T, by = f.at[1] * T + 14, W = 46, H = 40;
+      G.decor.push({ row: by / T, worldX: bx - W / 2, worldY: by - H, w: W, h: H, draw(sx, sy){
+        ctx.fillStyle = 'rgba(60,90,140,.25)'; ctx.fillRect(sx + 4, sy + H - 3, W - 6, 3);
+        blockPath(sx, sy, W, H); ctx.fillStyle = '#c4e6fa'; ctx.fill(); ctx.strokeStyle = '#78aad6'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.save(); ctx.globalAlpha = 0.85; drawSprite(f.item, sx + (W - f.w) / 2 | 0, sy + (H - f.h) / 2 + 2 | 0, f.w, f.h); ctx.restore();
+        blockPath(sx, sy, W, H); ctx.fillStyle = 'rgba(214,240,255,.38)'; ctx.fill();
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(sx + 10, sy + 6, W - 20, 2); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(sx + W - 8, sy + 10, 1, H - 20); } });
+      solid(Math.floor(f.at[0]), Math.floor(f.at[1]));
+      look(bx, by - 8, 32, f.look); }
+    // Hallvard's ice statues of Rimewick, on little ice plinths
+    const statue = n => { let c = glacCache.get(n); if(c) return c;
+      c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+      drawSpriteOn(g, n + '_down_idle', 0, 0, 64, 64);
+      g.globalCompositeOperation = 'source-atop'; g.fillStyle = '#a8d4f2'; g.fillRect(0, 0, 64, 64);
+      g.globalCompositeOperation = 'luminosity'; drawSpriteOn(g, n + '_down_idle', 0, 0, 64, 64);   // ice coloured, the carving's own light and shade
+      g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(190,226,250,.35)'; g.fillRect(0, 0, 64, 64);
+      const gr = g.createLinearGradient(16, 8, 48, 56); gr.addColorStop(0, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(60,110,170,.25)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      glacCache.set(n, c); return c; };
+    const STATUES = [
+      { n: 'npc_bjorn', c: 13, lines: ['An ice statue of Bjorn. It is frowning.', 'Hallvard says the frown was the easy part. The ice was already doing it.'] },
+      { n: 'npc_ragna', c: 15, lines: ['An ice statue of Jarl Ragna, chin up. Scratched into the plinth: "RAGNA. DO NOT KNEEL. SHE WILL ALLOW STANDING."'] },
+      { n: 'npc_orvar', c: 17, lines: ['An ice statue of Skald Orvar, mouth wide open, mid-song.', 'Somehow even the ice version is too loud.'] },
+    ];
+    for(const st of STATUES){ const x = (st.c + 0.5) * T, by = 16.9 * T;
+      G.decor.push({ row: by / T, worldX: x - 32, worldY: by - 74, w: 64, h: 74, draw(sx, sy){
+        ctx.fillStyle = 'rgba(60,90,140,.25)'; ctx.fillRect(sx + 15, sy + 72, 34, 2);
+        ctx.fillStyle = '#b4d6f0'; ctx.fillRect(sx + 17, sy + 62, 30, 11); ctx.fillStyle = '#e4f4ff'; ctx.fillRect(sx + 17, sy + 62, 30, 2); ctx.fillStyle = '#7ea8d0'; ctx.fillRect(sx + 17, sy + 72, 30, 1);
+        ctx.drawImage(statue(st.n), sx, sy + 4); } });
+      solid(st.c, 16);
+      look(x, by - 10, 30, () => st.lines.map(narrate)); }
+  }
 
   // ---------- Aldric's Heart (after the frozen memories): Aldric -> Hallvard -> three ice crystals -> chip the heart loose -> Aldric ----------
   Object.assign(QUEST_INFO, {
