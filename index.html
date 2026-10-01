@@ -231,6 +231,7 @@
   #xpTrack .xtb i{ display:block; height:100%; width:0; background:linear-gradient(90deg, #e3b44f, #f3d27a); transition: width .35s ease; }
   #xpTrack .xts{ font-size:14px; line-height:1; color:#cfd3dc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #goalHint b{ color: var(--gold); font-weight: normal; }
+  #goalHint b.ghArrow{ display:inline-block; width:0; height:0; border-left:10px solid var(--gold); border-top:7px solid transparent; border-bottom:7px solid transparent; margin-right:3px; vertical-align:-1px; }
   #bugBtn{ pointer-events:auto; margin-left:auto; width:26px; height:26px; flex:0 0 auto; border-radius:50%; cursor:pointer;
     background: var(--slate); border:2px solid var(--gold); box-shadow: 0 0 0 2px var(--outline); color: var(--gold);
     font-family: var(--ui-font); font-size:19px; line-height:20px; padding:0; opacity:.8; }
@@ -1619,6 +1620,7 @@
       makeNpc('npc_daughter', 12, 8, 0.72, 30, [
         "Did you go see Grandma yet? She loves telling stories about strange travelers.",
         "The path past the pond leads straight to her cottage, at the edge of the village.",
+        "I'm going to fall out of the sky too one day. I've been practising off the roof. Don't tell Mum.",
       ]),
       // Same idea - grandmaPages() builds the real sequence (these 4 lines
       // plus the one-shot "are you from Thalveil?" branch); this array is
@@ -1628,6 +1630,7 @@
         "Come closer, let me look at you... Yes. I've seen clothes like yours before, a long, long time ago.",
         "There's an old story about travelers who fall through when the world's seams wear thin. I never thought I'd meet one.",
         "I don't have all the answers, child. But you're welcome here for as long as it takes to find them.",
+        "Fifty years married. The secret is separate blankets. And separate houses, if you can manage it.",
       ]),
       // Grandpa doesn't cycle through these in order - grandpaPages() picks
       // ONE at random each time you talk to him, half about his aches and
@@ -1639,6 +1642,8 @@
         "Mark my words - this world hasn't got much time left in it.",
         "The seams are wearing thin, I tell you. It's only a matter of time before it all comes undone.",
         "I've seen the signs, mind you. Won't be long now before something gives way.",
+        "Back in my day we didn't fall out of the sky. We fell out of the tavern, like decent people.",
+        "That wizard. Grown man in a dress, with a hat that size. What's he hiding under there? Nothing. Bald as an egg.",
       ]),
     ],
     // first inventory items to test picking things up with - each needs a
@@ -3336,20 +3341,22 @@
     // cutscene doesn't have to duplicate his position/speed/lines.
     npcs: [
       makeNpc('npc_mayor', 21, 6, 0.9, 18, [
-        "Ah, a new face! Welcome to Puddlebottom. Mind the well in the square, it's older than most of the houses.",
         "I do my best to keep this place running smoothly, but between us - I have no idea what's going on in that forest either.",
         "If you ever need real answers, the villagers usually know more than I do. Don't let that get around.",
+        "Being mayor is easy. People shout at me, I nod, they go home. I haven't made a decision since spring.",
       ], null, 'Ophelia'),
       makeNpc('npc_smith', 25, 13, 0.9, 16, [
         "Need something forged, traveler? Business has been slow since folk stopped wandering far from home.",
         "Ever since the forest turned strange, I've been getting a lot more requests for sturdy locks.",
         "Keep your arm strong and your fire hot - that's the whole trade, really.",
+        "My swords are perfectly balanced. Hilda's are perfectly Hilda. Heavy, sour and overpriced.",
       ], null, 'Joren'),
       makeNpc('npc_wizard', 30, 12, 0.9, 18, [
         "The seams between worlds don't tear on their own, traveler. Something - or someone - has been pulling at the threads.",
         "I've felt a draft from the other side ever since you arrived. Interesting timing, wouldn't you say?",
         "Grandma Pizza isn't wrong to worry. I've read the old signs too, and I don't much like what they say.",
-        "Come back when you've heard more of the village's stories. I may be able to make sense of the pieces.",
+        "Magic is ninety percent concentration and ten percent not setting your beard on fire. I'm still working on the ten.",
+        "People think wizards are wise. We're just old, and nobody understands us, so nobody can argue.",
       ], null, 'Eldrin'),
     ],
   });
@@ -4285,9 +4292,10 @@
   // comment above), speed and repeat-visit lines unchanged from before
   // the pig quest existed.
   villageFarmerTemplate = makeNpc('npc_farmer', 12, 5, 0.9, 20, [
-    "That pig's the best thing that ever happened to this farm. Don't tell my wife I said that.",
     "Soil's been strange lately - crops come up fine, then wilt overnight for no reason at all.",
     "You crossed the river to get here? Didn't used to be one, if you can believe that.",
+    "I don't sleep WITH the pig. I slept NEXT TO the pig. Once. Twice. It was a cold winter, alright?",
+    "The pen's very quiet without Balthazar. Nobody calls me a turnip-fondler anymore. I miss it. A bit.",
   ], null, 'Bram');
 
   // Brightwood's residents live outside the generated scene block (it's
@@ -4295,8 +4303,9 @@
   // front of his shop, the red house top-left of the square (door ~23,24).
   SCENES.brightwood.npcs.push(makeNpc('npc_steven', 24, 26, 0.95, 16, [
     "Most common injury in Brightwood? Tripping over Wexley. He sleeps in the gate.",
-    "I'm an excellent surgeon. I've only lost one patient. Well. Parts of several.",
     "Haircut's two copper. Surgery's three. Both at once is a special: four.",
+    "I wash my hands every week, whether they need it or not.",
+    "Sir Cedric's liver is the hardest-working organ in town. I've asked it to go on strike.",
   ], null, 'Steven'));
   { const st = SCENES.brightwood.npcs[SCENES.brightwood.npcs.length-1]; st.anchor = { x: st.x, y: st.y }; st.anchorScene = 'brightwood'; st.leash = 48; }
   // v128 (user: Voula hid behind the trees at the map's edge): the family outdoors stays near home
@@ -4359,19 +4368,23 @@
     // the gatehouse hall's two guards (user: same uniform as Wexley)
     npc_dobbs: { name:'Private Dobbs', scene:'bw_gatehall', at:[5, 5], leash:28, speed:12, lines: [
         "Halt! Who goes... oh. You're already in. Carry on. Please.",
-        "First week on the job. Grimsby says I'll get used to the smell of the moat. We don't have a moat.",
-        "If the baron asks, I was standing up straight the whole time." ],
+        "If the baron asks, I was standing up straight the whole time.",
+        "Grimsby says I'll make a fine guard one day. I asked which day. He said 'not this one'.",
+        "The captain says stand up straight. I am standing up straight. I'm just very short." ],
       pig: [ "Is the pig allowed in? There's no rule about pigs. I checked. Twice." ] },
     npc_grimsby: { name:'Old Grimsby', scene:'bw_gatehall', at:[9, 5], leash:28, speed:9, lines: [
         "Forty years I've guarded this gate. Nobody's ever attacked it. I like to think that's me.",
-        "Don't mind the boy. He salutes the barrels when he thinks nobody's looking.",
         "Wexley's outside, sleeping on his feet. Best guard we've got. Very still. Very alert. Mostly still.",
-        "Don't use the privy by the east wall. Forty years, and it's still got a grudge against me personally." ],
+        "Young Dobbs fainted at the sight of blood. His own. From a paper cut.",
+        "Back in my day guards had moustaches. Proper ones. Pom's got more moustache than the whole garrison." ],
       pig: [ "In my day, pigs knew their place. Their place was in a sandwich." ] },
     npc_wexley: { name:'Wexley', at:[33, 51], leash:20, speed:10, lines: [
         "Twenty years I've guarded this gate. Nobody's ever attacked it. Very boring, twenty years. I've named all the pigeons.",
-        "The captain says I'm too soft. I say I'm perfectly firm. Round the middle, mostly.",
-        "Welcome to Brightwood. There's a toll of one copper. ...Still funny. Every time." ],
+        "Welcome to Brightwood. There's a toll of one copper. ...Still funny. Every time.",
+        "I'm not asleep. I'm watching the gate with my eyes shut. It's a technique.",
+        "Halt! Who goes there? ...Oh, it's you. Or a very good copy of you. Either way, go on.",
+        "Kurt's sausages keep me going on night shift. Going to the privy, mostly.",
+        "Twenty-one years now. I asked for a chair. They gave me a medal. You can't sit on a medal." ],
       pig: [ "Is that pig on a lead? No? He just... follows you? Mate, that's either magic or you smell of truffles." ],
       custom: (npc, S) => wexleyTonicPages(S) || (quests.song && quests.song.wexley && !bwMet.has('song_wexley')
         ? (markMet('song_wexley'), [ S("I heard the song. \"Asleep by the wall.\" I was RESTING my EYES. There's a difference. A legal one.") ]) : null) },
@@ -4395,7 +4408,9 @@
       custom: (npc, S) => shopkeeperPages('olaf', npc, S) },
     npc_rosie: { name:'Rosie', at:[34, 22], lines: [
         "My oven and I aren't speaking. It burned my muffins. On purpose, I'm sure of it.",
-        "Big Greta at the inn says my loaves are too small. Cheeky cow. She should see my baps." ],
+        "Fresh bread! Well. Yesterday's bread, fresh from yesterday.",
+        "My buns are the talk of the town. Not like that. Well. A little like that.",
+        "The baron orders a cake every week for his statue's birthday. The statue has a birthday every week, apparently." ],
       pig: [ "I don't do pork pies. Anymore. Don't ask." ],
       first: S => [
         S("Oh, a new face! Come in, come in, have a feel of my buns. Fresh this morning. Everyone says they're the softest in town.", { type:'choice', choices: [
@@ -4407,13 +4422,17 @@
       bye: "Mind how you go. And mind my buns.",
       custom: (npc, S) => shopkeeperPages('rosie', npc, S) },
     npc_greta: { name:'Greta', scene:'bw_inn', at:[11, 6], leash:10, speed:10, lines: [   // runs the inn: always inside (user)
-        "Sir Cedric's been drinking since his horse left. Or since before. Hard to tell with him." ],
+        "Sir Cedric's been drinking since his horse left. Or since before. Hard to tell with him.",
+        "My ale's brewed with love and river water. The river does most of the work.",
+        "House rules: no fighting, no singing, no Lorenzo. Mostly no Lorenzo.",
+        "I've thrown out bigger men than you. I've thrown out bigger men than ME. Cedric came back in through the window." ],
       pig: [ "No pigs in the inn. ...Oh, he talks? Fine. Talking pigs pay double." ],
       custom: (npc, S) => gretaPages(npc, S) },
     npc_lorenzo: { name:'Lorenzo', at:[27, 29], lines: [
         "I once played for a king. He paid me to stop. That counts as a paid performance.",
-        "My lute is missing a string. I sold it for bread. Art is suffering, and also hungry.",
-        "I'm writing the anthem of Brightwood. I'm stuck on the rhymes. Come back when I'm less stuck. Or more stuck." ],
+        "I know three songs. Two are about love. The third is about a goat. Guess which one they request.",
+        "A bard's life: sing for your supper, get no supper, sing about the lack of supper.",
+        "My new song is called 'Please Give Lorenzo a Copper'. It's very short if you pay." ],
       pig: [ "A singing pig! No? A talking one? Even better. Tragic ballad material." ],
       custom: (npc, S) => lorenzoPages(npc, S),
       shout: [25, 40, () => quests.song && quests.song.state === 'done'
@@ -4424,14 +4443,17 @@
       shout: [12, 20, () => { const n = barnabyNews(); return n[Math.floor(Math.random()*n.length)]; }] },
     npc_pip: { name:'Pip', at:[33, 28], scale:0.95, speed:22, leash:72, lines: [
         "Grubb the tax man tried to tax me once. I taxed him right back. He still hasn't found his boots.",
-        "Have you seen a dog? Brown. And white. And mostly mud. Never mind. I'll find him. Probably." ],
+        "Have you seen a dog? Brown. And white. And mostly mud. Never mind. I'll find him. Probably.",
+        "I don't steal. I borrow forever.",
+        "Sir Barksalot ate a whole sausage off Kurt's stall. He's been sick for two days. Kurt says that's normal.",
+        "Don't feed Sir Barksalot beans. Just don't. The church still smells." ],
       pig: [ "Can I ride him? Just once? He looks bouncy." ],
       custom: (npc, S) => pipPages(npc, S) || pipQuestPages(npc, S) || pipPupPages(npc, S) || pipLessonPages(npc, S) },
     npc_kurt: { name:'Kurt', at:[26, 31], leash:10, speed:10, lines: [
         "Special edition sausages coming soon. Very special. Very... limited.",
-        "Wexley's my best customer. And my only customer. And my cousin.",
         "Eat it fast. Before your nose works out what your mouth is doing.",
-        "No refunds. Not after it's been through you. I have standards." ],
+        "Meat of the day: yes.",
+        "Everybody asks what's in it. Nobody wants to know. That's the secret of a good sausage." ],
       pig: [ "Is he for sale? I'm asking for a... recipe. A friend. I mean a friend." ],
       first: S => [
         S("Sausage on a stick! Two copper! Mystery meat, the mystery is part of the flavour!", { type:'choice', choices: [
@@ -4447,13 +4469,16 @@
     npc_cedric: { name:'Sir Cedric', at:[35, 30], speed:12, lines: [
         "You there! Have you seen a horse? Grey. Proud. Named Buttercup. She left me three days ago. Like my wife. And my other wife.",
         "I was a great knight once. I had a horse, a sword, and a sense of direction. Now I have a sword.",
-        "*hic* Don't tell the captain. She knows. Don't tell her anyway." ],
+        "*hic* Don't tell the captain. She knows. Don't tell her anyway.",
+        "A knight has three virtues: courage, honour and a horse. I'm two out of three. Two and a half on a good day.",
+        "Squire wanted! Bring your own horse, sword and ale. Pay is in honour. And ale, if you brought it." ],
       pig: [ "Is that... a horse? A very short, pink horse? No. No, of course not. *hic*" ],
       custom: (npc, S) => cedricPages(npc, S) },
     npc_ambrose: { name:'Father Ambrose', at:[32, 14], leash:40, speed:12, lines: [
         "The seam holds the world together. Mostly. Some nights I think I can hear it creak.",
         "Communion wine is holy. Especially the third bottle.",
-        "Mind the step, child. And the wine. Mostly the wine." ],
+        "I've been sober for three days. Not in a row.",
+        "Water into wine, yes. Wine into water? Possible. Why anyone would want to, I couldn't tell you." ],
       pig: [ "Is that pig blessed? No? I could fix that. For a small donation. Of wine." ],
       custom: (npc, S) => ambrosePages(npc, S),
       first: S => [
@@ -4468,7 +4493,9 @@
       ] },
     npc_baron: { name:'Baron Puffington', at:[32, 32], leash:48, speed:10, lines: [
         "Brightwood is the finest town in the realm. I've never seen the others, but I'm sure of it. What what.",
-        "Mind the pigeons. They have no respect for nobility." ],
+        "Mind the pigeons. They have no respect for nobility.",
+        "The pigeons are plotting against me. Gathering. Cooing. CONSPIRING.",
+        "I taxed the peasants. Then I taxed the tax. Grubb says it's genius. Grubb gets ten percent." ],
       pig: [ "Is that your pig? Keep it away from my shoes. They're older than you." ],
       custom: (npc, S) => baronJournalPages(npc, S) || (quests.song && quests.song.baron && !bwMet.has('song_baron')
         ? (markMet('song_baron'), [ S("YOU. The song. I'll have you know I am NOT a ball. I am a perfectly normal shape. Round is a shape. What what!") ]) : null),
@@ -4483,15 +4510,20 @@
         "Wexley's asleep again. At the gate. Standing up. It's almost impressive.",
         "The baron wants me to arrest the pigeons for \"soiling his statue\". I told him I'd need a bigger prison. And a smaller baron.",
         "The forest's quieter since you went through it. Still screaming a bit. Less, though.",
-        "Last recruit asked where the latrine was. I pointed at the forest. He's still in there. Could be the wraiths. Could be the nettles." ],
+        "I once killed a bear with a spoon. Big spoon. Small bear. Still counts.",
+        "Cedric applied to join the guard. Saluted with his drinking hand. Both his hands are drinking hands.",
+        "Sword, shield, boots. And never Kurt's sausages before a march. Learned that one the hard way. And the runny way." ],
       custom: (npc, S) => brunhildePages(npc, S) || ((companion && Math.random() < 0.5)
         ? [ S("Is that pig a soldier? He's got the look. Same as Wexley. Round and useless."), say('Balthazar', 'pig', "I resent that. I'm round and EXTREMELY useful.") ]
         : null) },
     npc_hilda: { name:'Hilda', at:[17, 40], leash:64, lines: [
         "Joren? Don't say that name in my forge. Say it outside. Then spit.",
         "Forty years at this anvil. The anvil's held up better than my knees.",
-        "Bellows are fixed. My temper isn't. Buy something.",
-        "Joren asked to borrow my bellows once. For his love life, he said. I burned the bellows. Then I washed my hands. Twice." ],
+        "Iron's honest. You hit it, it changes. Hit people and they cry and tell the captain.",
+        "Joren makes swords like he makes love: quick, sloppy, and everyone's disappointed.",
+        "My hammer's called Gertrude. Never let me down once. Unlike my husbands.",
+        "Rust is the enemy. Rust and Joren. Rust at least has the decency to be slow.",
+        "Hot iron, cold beer, nobody talking. That's my holiday." ],
       bye: "Off you go. Mind the anvil, it bites.",
       first: S => inventory.bronze_sword ? [
         S("Is that a BRONZE sword? Who made that, a toddler? ...Joren. It's Joren's work, isn't it. I can tell by the lumps.", { type:'choice', choices: [
@@ -4503,7 +4535,10 @@
       custom: (npc, S) => shopkeeperPages('hilda', npc, S) },
     npc_pennywhistle: { name:'Mrs. Pennywhistle', at:[15, 27], leash:48, speed:10, lines: [
         "My fifth husband was a lovely man. Very quiet. Especially at the end.",
-        "Grizelda, the witch in the Fenmire? Moustache like a broom. Hexed my fourth husband into a toad. Best husband I ever had." ],
+        "Grizelda, the witch in the Fenmire? Moustache like a broom. Hexed my fourth husband into a toad. Best husband I ever had.",
+        "Looking for husband number six. Must be quiet, rich, and have a weak chest.",
+        "Mortimer gives me a loyalty card. Two more stamps and the next one's free.",
+        "Number three fell down the well. Number five just stopped. I'm not unlucky, dear. THEY were." ],
       pig: [ "Oh, what a lovely pig. My third husband looked just like that. Around the eyes." ],
       custom: (npc, S) => pennywhistlePages(npc, S) || witchStartPages(npc, S) || afterJournal('pennywhistle', [ S("Henk? The one with the odd shoes? He asked me to dance once. Then he walked into the Fenmire. Men will do anything to avoid a second dance, dear.") ]),
       first: S => [
@@ -4517,13 +4552,15 @@
     // campfire and her cauldron
     npc_grizelda: { name:'Grizelda', scene:'fenmire', at:[14, 11], leash:24, speed:8, lines: [
         "My moustache is waxed, my tower is damp, and nobody's tried to stab me all week. Bliss.",
-        "Still got the pig? Good. Suits you. Suits him better.",
-        "Last man who laughed at my moustache is a toad now. He's happier. Better legs. Fewer opinions.",
-        "The swamp gas round here? Half of it's the bog. The other half is Grizelda's Tuesday stew. I'm Grizelda." ],
+        "I'm a witch, not a monster. I only curse people who deserve it. And on Tuesdays, everybody.",
+        "Kiss a toad, get a prince? Rubbish. I've tried. Twice. Got warts and a very confused toad." ],
       custom: (npc, S) => grizeldaPages(npc, S) },
     npc_mortimer: { name:'Mortimer', at:[42, 27], leash:48, speed:12, lines: [
         "Business is slow. People keep not dying. Very inconsiderate.",
-        "I buried Henk's shoes once. Lovely shoes. Very clean. Strange, that." ],
+        "Just measuring you up. Professional habit. About six foot. In length.",
+        "Business is dead. ...Every time. I never get tired of it.",
+        "Mrs. Pennywhistle's my best customer. Well. Her husbands are.",
+        "I talk to the bodies. They're good listeners. Better than Lorenzo's audience, and they've got the same expression." ],
       custom: (npc, S) => afterJournal('mortimer', [ S("Henk? Lovely fellow. I buried his shoes. He walked into the Fenmire and only his shoes came back. They were very clean. Strange, that.") ]) || horseClue('mortimer', [ S("Missing horse? I don't do horses. But I did see a saddle in Kurt's rubbish. Lovely grey hairs on it. I didn't ask. I never ask. I just... measure.") ]),
       first: S => [
         S("Ah! A living customer! How rare. Six feet even, I'd say. Maybe six-one with boots. I'll keep a box aside for you.", { type:'choice', choices: [
@@ -4538,11 +4575,11 @@
     // round 6 (user: the Puddlebottom tavern was empty but for Black Jack): Old Tom
     // behind the bar (user's pick B) and four regulars who stay put (user: standing)
     npc_tom: { name:'Old Tom', scene:'tavern', at:[11.125, 3.3125], scripted:true, dir:'down', talkRange:90, lines: [
-        "Cider's on. Ale's off. The stew is... present.",
-        "Black Jack pays his rent in cards. I can't eat cards. I've tried.",
         "Gus hasn't gone home since spring. His wife sends his dinner here now. It's nicer that way, she says.",
         "Forty years behind this bar. I've heard every story. Most of them from Wendel. Most of them about an eel.",
-        "Privy's out the back. Knock first. Gus fell asleep in there Tuesday and we didn't find him till Thursday." ],
+        "Privy's out the back. Knock first. Gus fell asleep in there Tuesday and we didn't find him till Thursday.",
+        "My cider's apples, rainwater and whatever fell in. This year a sock fell in. Best vintage yet.",
+        "I've thrown out drunks, brawlers and a bear. The bear was the politest of the three." ],
       pig: [ "Forty years behind this bar. You're not even the weirdest thing today. That's the pig." ],
       bye: "Safe home. And mind the step on your way out - it's been tripping people up since before I was born.",
       first: S => [ S("Evening. Or morning. In here it's always evening. What'll it be?", { type:'choice', choices: [
@@ -4553,9 +4590,10 @@
       custom: (npc, S) => shopkeeperPages('tom', npc, S) },
     npc_gus: { name:'Gus', scene:'tavern', at:[1.375, 7.3125], scripted:true, dir:'right', lines: [
         "Home? Home is where the cider is.",
-        "My turnips grow by themselves. I checked. I'll check again tomorrow. From here.",
         "The wife says I live at the tavern. I say the tavern lives at me. She didn't laugh either.",
-        "Third cider, I can feel my toes. Fifth, I can't find them. Seventh, the privy finds me." ],
+        "I'm not drunk. I'm horizontal-curious.",
+        "Doctor says one cider a day. So I see six doctors.",
+        "The wife and I have an understanding. She understands I'm here. I understand she's glad." ],
       pig: [ "Is that a pig? Don't tell Bram. He'll want it back. Or want it for dinner." ],
       first: S => [ S("Evening. Pull up a... no, you're standing. Good. Stand. It's cheaper.", { type:'choice', choices: [
           { label:"Don't you have a farm?", onChoose(){ spliceNext(S("A farm, a wife and six goats. They all manage fine without me. That's what hurts.")); } },
@@ -4563,10 +4601,10 @@
         ]}) ] },
     npc_nell: { name:'Nell', scene:'tavern', at:[8.375, 5.625], scripted:true, dir:'left', lines: [
         "I wash everybody's shirts, dearie. Shirts talk. Mostly about gravy.",
-        "Bram's got mud up to the collar every week. Says it's the pig. The pig says it's Bram.",
-        "Joren burns a hole in a sleeve every day. Showing off, I call it. Showing his elbows.",
-        "The mayor's husband wears the same socks all week. I'm not saying which week.",
-        "The baron's underpants have his family crest on the back, dearie. After a week you can't read the motto. You can smell it, though." ],
+        "The baron's underpants have his family crest on the back, dearie. After a week you can't read the motto. You can smell it, though.",
+        "Old Wendel's trousers have an eel stain. Don't ask. HE'LL tell you.",
+        "Eldrin's robes come in burnt on the bum every week. I've stopped asking which spell that is.",
+        "You've been rolling about with a pig, by the smell of you. I don't judge, dearie. I just wash." ],
       pig: [ "Is that the talking pig? Oh, the stories I've heard. Most of them from him, I expect." ],
       first: S => [ S("Ooh, a new face! Nobody tells me anything, dearie. So I find out myself.", { type:'choice', choices: [
           { label:"What do you do?", onChoose(){ spliceNext(S("Laundry. Everybody's. You'd be amazed what a shirt tells you. Grass stains, sword cuts, love letters in the pocket...")); } },
@@ -4577,7 +4615,11 @@
         "Forty years I ran the ferry. Then the river got a bridge. Then the bridge got a troll. Then I retired.",
         "The eel pulled the whole ferry upstream. Twice. With the cow still on it.",
         "Last I saw the eel, it winked at me. Eels don't wink. This one did.",
-        "Then there's the OTHER eel story. The one where I fell in with my trousers down. We don't tell that one before supper." ],
+        "Then there's the OTHER eel story. The one where I fell in with my trousers down. We don't tell that one before supper.",
+        "Did I ever tell you about the eel? ...I did? Did I mention it had a moustache?",
+        "Some say the eel was a log. Logs don't bite your bottom. I've got proof. Tom won't let me show it anymore.",
+        "The eel's still out there. Waiting. Eels are patient. Like wives.",
+        "I'm writing a book about the eel. Chapter one: the eel. Chapter two: the eel again." ],
       pig: [ "A talking pig, eh? I once met a talking eel. Well. It hissed. Close enough." ],
       first: S => [ S("Sit down, sit down. Or stand. I'll tell it either way.", { type:'choice', choices: [
           { label:"Tell me about the eel.", onChoose(){ spliceNext(S("It was a dark night. Dark as a boot. And out of the water came... well. It was big. Come back and I'll tell you the rest.")); } },
@@ -4585,9 +4627,8 @@
         ]}) ] },
     npc_hobb: { name:'Hobb', scene:'tavern', at:[9.44, 5.875], scripted:true, dir:'up', scale:0.9, lines: [
         "You fight monsters? Can I come? I've got a stick!",
-        "This is my first cider. I think. The room says it's my third.",
-        "When I'm an adventurer I'll have a sword AND a hat. A big hat.",
-        "Joren says I can hold his hammer when I'm older. I'm older now. I'm going to ask again." ],
+        "Joren says I can hold his hammer when I'm older. I'm older now. I'm going to ask again.",
+        "I've named my sword Stabby. Now I just need a sword." ],
       pig: [ "Is that your pig? Is he a magic pig? He looks like a magic pig." ],
       first: S => [ S("Whoa. Are you an adventurer? You look like an adventurer. You've got... walking.", { type:'choice', choices: [
           { label:"I'm just passing through.", onChoose(){ spliceNext(S("That's what adventurers SAY. I'll say that too, when I am one.")); } },
@@ -4596,14 +4637,15 @@
     npc_grubb: { name:'Grubb', at:[30, 37], leash:150, speed:20, lines: [
         "Grubb. Tax collector. I'm watching you. Well. Your purse.",
         "There's a tax on standing still. And one on moving. Choose wisely.",
-        "New this week: a privy tax. Per visit. Kurt's been holding it since Tuesday. He's gone a very interesting colour." ],
+        "Breathing tax is due Friday. You've been breathing a lot. I've noticed.",
+        "Dog tax, pig tax, smug-looking pig tax. That last one's yours." ],
       pig: [ "Is that pig registered? There's a pig tax. I'm inventing it right now." ] },
     // round 6e: the residents of Brightwood's ordinary houses (user: a name and a little
     // story each, humour on the edge) - they potter about inside their own house
     npc_maud: { name:'Maud', scene:'bw_maud', at:[4.2, 7.3], leash:40, speed:8, lines: [
         "Say hello to Herbert. He's on the table. In the urn. Don't shake him.",
         "Forty years he never listened. Now he listens all day. Marriage is about patience.",
-        "Herbert says you look peaky. Herbert was never a doctor. Herbert was never much of anything." ],
+        "I dust Herbert every Sunday. First time in his life he's been cleaned regularly." ],
       pig: [ "Herbert always wanted a pig. Herbert, look! ...He's thrilled. You can tell by the silence." ],
       first: S => [ S("Oh! A visitor. Herbert, we have a visitor. ...He says hello.", { type:'choice', choices: [
           { label:"Who's Herbert?", onChoose(){ spliceNext(S("My husband. He's in the urn, on the big table. He's much better company now. Doesn't snore, doesn't argue, doesn't leave his socks about.")); } },
@@ -4612,7 +4654,9 @@
     npc_pim: { name:'Pim', scene:'bw_twins', at:[7.3, 6.2], leash:30, speed:10, lines: [
         "I'm Pim. The good one. He's Pom. You can tell by the moustache. Evil grows moustaches.",
         "Mother liked me best. She told me. She also told Pom. She was a very kind liar.",
-        "If anything goes missing in Brightwood, it was Pom. Probably. Statistically." ],
+        "If anything goes missing in Brightwood, it was Pom. Probably. Statistically.",
+        "Mother put a bell on Pom when we were little. To tell us apart. And to hear him coming.",
+        "Pom shaved off my eyebrow while I slept. I shaved off his moustache. It grew back by lunch. Evil is quick." ],
       pig: [ "Is the pig evil? Pom says the pig looks evil. That's exactly what an evil twin would say." ],
       first: S => [ S("Before you ask: I'm the good twin.", { type:'choice', choices: [
           { label:"Then who's the evil one?", onChoose(){ spliceNext(S("We agreed one of us has to be evil. It's tradition. We just never agreed which.")); } },
@@ -4621,7 +4665,8 @@
     npc_pom: { name:'Pom', scene:'bw_twins', at:[8.25, 6.2], leash:30, speed:10, lines: [
         "The moustache proves NOTHING. Lots of good people have moustaches. Name one. ...I'll wait.",
         "Pim ate the last honey cake. I saw him. I was in the room. Eating the other one.",
-        "I grew the moustache first. That makes me the original. Pim is the copy." ],
+        "Mother's will leaves everything to 'the nice one'. We've been fighting about it for six years.",
+        "If something goes missing, it was Pim. He wants you to think it was me. That's how you know." ],
       pig: [ "A talking pig. Pim, look! It's the evil one. ...Sorry, pig. Habit." ],
       first: S => [ S("Whatever Pim told you, it's lies. I'm the good twin.", { type:'choice', choices: [
           { label:"He said the same thing.", onChoose(){ spliceNext(S("Of COURSE he did. That's what the evil twin says. It's in all the stories. Look it up.")); } },
@@ -4629,9 +4674,9 @@
         ]}) ] },
     npc_bertha: { name:'Bertha', scene:'bw_bertha', at:[4.2, 6.2], leash:36, speed:9, lines: [
         "Mind the bees. They're friendly. Mostly. Don't breathe loudly.",
-        "The honey is free. The stings are also free. Everything here is free, that's the problem.",
         "My husband left because of the bees. The bees and I have never been happier.",
-        "Rosie buys my honey for her cakes. Don't tell her where the bees sleep. It's in the bread bin." ],
+        "Got stung on the bum last week. Steven says it'll go down. It's been a week. It's a big bum now.",
+        "Pim and Pom fight over my honey cakes. I only ever make one. Just to watch." ],
       pig: [ "Bees don't like pigs. Pigs don't like bees. Stand very still, piggy. Stiller. STILLER." ],
       first: S => [ S("Come in, come in! Shut the door, they get out.", { type:'choice', choices: [
           { label:"Why are there bees in your house?", onChoose(){ spliceNext(S("Where else would they live? Outside? In the COLD? What kind of monster are you?")); } },
@@ -4640,8 +4685,9 @@
     npc_figgs: { name:'Mister Figgs', scene:'bw_figgs', at:[7.6, 6.7], leash:30, speed:8, lines: [
         "Retired now. I grow cabbages. Very neat rows. Old habits.",
         "Chop a carrot? I could. I won't. I've done enough chopping for one lifetime. Several lifetimes, technically.",
-        "People are nervous around me. I tell them: relax, I only ever took a little off the top.",
-        "The hood? It's for the garden. Keeps the sun off. And the neighbours." ],
+        "The hood? It's for the garden. Keeps the sun off. And the neighbours.",
+        "Forty years in the trade and not one complaint. Not afterwards, anyway.",
+        "Need a haircut? Go to Steven. I only ever did the one style. Very short. Very final." ],
       pig: [ "A pig. I haven't seen a neck that thick in years. That's a compliment. Professionally." ],
       first: S => [ S("Good day. Don't mind the hood. I'm retired.", { type:'choice', choices: [
           { label:"Retired from what?", onChoose(){ spliceNext(S("Public service. Heads of state. Well. Heads, anyway. The state was usually attached before I got there.")); } },
@@ -10610,9 +10656,11 @@
   // state (has the player already given their name? already been asked
   // about Thalveil?) or should vary (Grandpa), so they're built fresh
   // each conversation instead of being a fixed array on the npc object.
+  // 1 Oct (user's picks on the small-talk panels): a repeat chat is ONE line, the next one each time, like the town folk
+  function nextLine(npc){ npc._lineIdx = ((npc._lineIdx ?? -1) + 1) % npc.lines.length; return npc.lines[npc._lineIdx]; }
   function buildNpcDialoguePages(npc, speaker){
-    if(npc.spritePrefix === 'npc_daughter') return christinaPages(speaker);
-    if(npc.spritePrefix === 'npc_grandma') return grandmaPages(speaker);
+    if(npc.spritePrefix === 'npc_daughter') return christinaPages(speaker, npc);
+    if(npc.spritePrefix === 'npc_grandma') return grandmaPages(speaker, npc);
     if(npc.spritePrefix === 'npc_grandpa') return grandpaPages(npc, speaker);
     if(npc.spritePrefix === 'npc_mother') return voulaPages(npc, speaker);
     if(npc.spritePrefix === 'npc_mayor') return mayorPages(npc, speaker);
@@ -10648,17 +10696,16 @@
         } }),
     ];
   }
-  function christinaPages(speaker){
+  function christinaPages(speaker, npc){
     if(!playerName) return christinaHelloPages(speaker);
     const C = text => ({ speaker, portrait:'npc_daughter', text });
     if(!bwMet.has('voula_met')) return [ C(`${playerName}! Did you say hello to Mum yet? She's by the house. Go on, she doesn't bite.`) ];
-    return [
-      C(`${playerName}! Did you go see Grandma yet? She loves telling stories about strange travelers.`),
-      C("The path past the pond leads straight to her cottage, at the edge of the village."),
-    ];
+    const line = npc ? nextLine(npc) : npc;
+    if(!line || line.startsWith('Did you go see Grandma')) return [ C(`${playerName}! Did you go see Grandma yet? She loves telling stories about strange travelers.`) ];
+    return [ C(line) ];
   }
-  function grandmaPages(speaker){
-    const pages = [
+  function grandmaPages(speaker, npc){
+    const pages = (grandmaAskedOrigin && npc) ? [ { speaker, portrait:'npc_grandma', text: nextLine(npc) } ] : [
       { speaker, portrait:'npc_grandma', text: "So you're the one Christina found out in the field." },
       { speaker, portrait:'npc_grandma', text: "Come closer, let me look at you... Yes. I've seen clothes like yours before, a long, long time ago." },
       { speaker, portrait:'npc_grandma', text: "There's an old story about travelers who fall through when the world's seams wear thin. I never thought I'd meet one." },
@@ -10811,7 +10858,7 @@
     const cake = mayorCakePages(speaker);
     if(cake) return cake;
     if(mayorHelped){
-      return npc.lines.map(text => ({ speaker, text, portrait: npc.spritePrefix }));
+      return [ { speaker, text: nextLine(npc), portrait: npc.spritePrefix } ];
     }
     return [
       { speaker, portrait:'npc_mayor', text: "You're the traveler everyone's been talking about, aren't you? What can I do for you?", type:'choice',
@@ -10865,7 +10912,7 @@
         ...combatTutorPages(speaker),
       ];
     }
-    const pages = npc.lines.map(text => ({ speaker, text, portrait: npc.spritePrefix }));
+    const pages = [ { speaker, text: nextLine(npc), portrait: npc.spritePrefix } ];
     pages[pages.length - 1] = { ...pages[pages.length - 1], type:'choice', choices: [
       { label:"How do I get better at fighting?", onChoose(){ spliceNext(...combatTutorPages(speaker)); } },
       { label:"Thanks, Joren.", onChoose(){ spliceNext({ speaker, portrait:'npc_smith', text: "Mm." }); } },
@@ -10892,7 +10939,7 @@
     if(knownSpells.includes('fireball')){
       const henk = afterJournal('eldrin', [ { speaker, portrait: npc.spritePrefix, text: "Henk de Vries... so there WAS another one before you. And something in the Fenmire is tugging at the seam? Then that's where the threads lead. Go carefully. Swamps keep what they take." } ]);
       if(henk) return henk;
-      const pages = npc.lines.map(text => ({ speaker, text, portrait: npc.spritePrefix }));
+      const pages = [ { speaker, text: nextLine(npc), portrait: npc.spritePrefix } ];
       pages[pages.length - 1] = { ...pages[pages.length - 1], type:'choice', choices: [
         { label:"How does my magic get stronger?", onChoose(){ spliceNext(...magicTutorPages(speaker)); } },
         ...b3EldrinChoices(speaker),
@@ -11577,7 +11624,7 @@
       if(q1.hush) pool.push("You tell anyone about that note and I'll tell everyone you fell out of a cloud. Oh wait, they already know.");
       return [ R(pool[Math.floor(Math.random()*pool.length)]) ];
     }
-    return npc.lines.map(t => R(t));
+    return [ R(nextLine(npc)) ];
   }
 
 
@@ -11585,7 +11632,9 @@
   function townPages(npc, speaker){
     const t = TOWN[npc.spritePrefix];
     const S = (text, extra) => say(speaker, npc.spritePrefix, text, extra);
-    if(t.first && !bwMet.has(npc.spritePrefix) && !npc._mob){ markMet(npc.spritePrefix); return t.first(S); }   // v133: the mob's lines come first
+    if(t.first && !bwMet.has(npc.spritePrefix) && !npc._mob){ markMet(npc.spritePrefix);   // v133: the mob's lines come first
+      // 1 Oct (user: Brenna only started her quest after "Tell me more"): what they have to ask you comes straight after hello
+      const f = t.first(S), c = t.custom && t.custom(npc, S); return c ? [...f, ...c] : f; }
     if(t.custom){ const p = t.custom(npc, S); if(p) return p; }
     const line = (companion && t.pig && Math.random() < 0.5) ? t.pig[Math.floor(Math.random()*t.pig.length)]
       : (npc._lineIdx = ((npc._lineIdx ?? -1) + 1) % t.lines.length, t.lines[npc._lineIdx]);
@@ -15945,9 +15994,9 @@
   // ---- Rimewick's people (tools/town_npc_specs.py) + the hermit
   Object.assign(TOWN, {
     npc_hulda: { name: 'Hulda', scene: 'fp_inn', at: [11, 6], leash: 10, speed: 12, bye: 'Boots off next time. I mean it.', lines: [
-        "Boots off, soup on, stories later.",
         "Only warm place on the mountain, this. Don't let the cold in. Or Bjorn. Same thing.",
-        "Bjorn had a bath in spring. The whole village came out to watch. The wolves left the mountain for a week." ],
+        "Soup's fish. Yesterday was fish. Tomorrow's a surprise. It's fish.",
+        "Orvar sang for his supper. I gave him supper to make him stop." ],
       pig: [ "A pig! Oh, you're lovely. You're lovely AND you're soup-sized. Only joking. Mostly." ],
       first: S => [ S("Shut that door! Oh. A stranger. Up the pass? In THOSE clothes? Sit. Soup. Now.", { type: 'choice', choices: [
           { label: "What's in the soup?", onChoose(){ spliceNext(S("Everything. Don't ask twice. The last one who asked twice is IN the soup. Joking. He's in the cellar.")); } },
@@ -15955,19 +16004,18 @@
         ] }) ],
       custom: (npc, S) => shopkeeperPages('hulda', npc, S) },
     npc_bjorn: { name: 'Bjorn', scene: 'frostpeak', at: FP.npc.bjorn, leash: 36, speed: 10, bye: 'Hm.', lines: [
-        "Wolves. Hungry. Like me. Buy something.",
         "Pelts. Bring pelts. I pay. Hm.",
-        "Bath? Spring. Every spring. Whether I need it or not. Hm.",
-        "Wolves eat everything. Even the bits of the deer you don't want to know about. Especially those. Hm." ],
+        "Wolf bit me. I bit back. Wolf left. Hm.",
+        "Hulda's soup. Hot. Like Hulda. ...Don't tell Hulda. Hm." ],
       first: S => [ S("Hm. You're not from here. Nobody's from here. Buy something.", { type: 'choice', choices: [
           { label: 'Tell me about the wolves.', onChoose(){ spliceNext(S("White. Fast. They come from the pass when it's cold. It's always cold. Hit them in the nose. Then run.")); } },
           { label: 'What about the man at the top?', onChoose(){ spliceNext(S("Aldric. Keeps the peak frozen. Year round. Wolves won't go near him. Smart wolves.")); } },
         ] }) ],
       custom: (npc, S) => shopkeeperPages('bjorn', npc, S) },
     npc_ingrid: { name: 'Old Ingrid', scene: 'frostpeak', at: FP.npc.ingrid, leash: 20, speed: 8, lines: [
-        "Thirty years at this hole. Nobody's caught a bigger pike. Nobody's allowed to.",
-        "The fish down there are older than me. Almost. I checked.",
-        "Sven lost his rod down the big hole. Fifty years he's fished. Forty-nine, really." ],
+        "The trick to ice fishing is patience, a warm hat, and not marrying a fisherman.",
+        "I talk to the fish. They don't talk back. Best conversations I've had since my husband.",
+        "Thirty years and I've never fallen through. Sven's fallen through four times. For attention, I think." ],
       first: S => [ S("Oi! That's MY hole. Well. They're all my holes. Fish in any of them and I'll know.", { type: 'choice', choices: [
           { label: 'Can I fish here?', onChoose(){ spliceNext(S(fishLv() >= 25 ? "You? Hm. You hold a rod like you mean it. Go on then. The frost pike bite at the far holes. Don't tell anyone I said so."
             : "With THOSE hands? The frost pike would laugh at you. Come back when you're a real angler. Level 25. I'll wait. I'm good at waiting.")); } },
@@ -15976,15 +16024,19 @@
     npc_tomas: { name: 'Tomas', scene: 'frostpeak', at: FP.npc.tomas, leash: 60, speed: 22, lines: [
         "Have you seen a wolf? A real one? Up close? Did it bite? Can I see the bite?",
         "When I grow up I'm going to be a wolf.",
-        "Mum made me the ears. I made the tail myself. Don't ask what it used to be." ],
+        "Mum made me the ears. I made the tail myself. Don't ask what it used to be.",
+        "Wolves don't have to wash. I'm practising.",
+        "Wolves pee on things to say 'mine'. Mum says I'm not allowed to say 'mine' on the furniture anymore." ],
       pig: [ "Is that a wolf? It's a pig. Can I pet it anyway? Can it pet ME?" ],
       first: S => [ S("Are you a wolf hunter? You look like a wolf hunter. A small one.", { type: 'choice', choices: [
           { label: 'Do you like wolves?', onChoose(){ spliceNext(S("I LOVE wolves. Mum says they'd eat me. I say that's a very good reason to meet one.")); } },
           { label: "What's up the mountain?", onChoose(){ spliceNext(S("Old Aldric! He's got a magic crack. I'm not allowed. I went anyway. He gave me a biscuit and sent me home. It was a frozen biscuit.")); } },
         ] }) ] },
     npc_aldric: { name: 'Aldric', scene: 'frostpeak', at: FP.npc.aldric, leash: 10, speed: 6, lines: [
-        "Mind the crack. It bites.",
-        "There, there. Good ice. Hold on a little longer." ],
+        "The crack sings at night. Nobody else hears it. Nobody else listens.",
+        "Snowball ate my boots again. Yetis grow out of it, apparently. In two hundred years.",
+        "I came up here for peace and quiet. Then they built a village. Then they built a mead hall.",
+        "Brenna brings me mead to keep warm. It doesn't. It keeps me cheerful about being cold." ],
       custom: (npc, S) => aldricPages(npc, S) },
   });
   SHOPS.hulda = { title: "Hulda's Hearth", keeper: 'npc_hulda', buy: [['hearty_soup', 6], ['bread_bun', 2], ['bog_brandy', 8]],
@@ -16023,8 +16075,9 @@
     LOOT_SPOTS.push({ id: `${scene}:${x},${y}`, scene, kind, x, y, table: lock ? 'locked' : 'desert', lock: lock || 0 });
   Object.assign(TOWN, {
     npc_astrid: { name: 'Astrid', scene: 'fp_astrid', at: [7, 5], leash: 30, speed: 12, bye: 'Mind the draught. It bites.', lines: [
-        "Wolf fur, bear fur, goat fur. Don't ask about the goat.",
-        "Up here you dress for the weather or the weather dresses you. In ice." ],
+        "Up here you dress for the weather or the weather dresses you. In ice.",
+        "A good hat up here saves your ears. Sven never wore one. Ask him about it. He'll say 'What?'",
+        "Grandmother wore the same fur for sixty years. When she died we buried the fur and kept her. No. Other way round." ],
       pig: [ "Is he spoken for? That's a winter's worth of mittens. I'm joking. Mostly." ],
       first: S => [ S("A customer! In summer clothes! Oh, you poor thing. Sit. No - stand, I need your measurements.", { type: 'choice', choices: [
           { label: 'Where does all the fur come from?', onChoose(){ spliceNext(S("Bjorn. Mostly. He brings pelts, I make them warm. He says 'Hm.' I say 'thank you'. It's a good marriage. We're not married.")); } },
@@ -16033,8 +16086,8 @@
       custom: (npc, S) => shopkeeperPages('astrid', npc, S) },
     npc_gunnar: { name: 'Gunnar', scene: 'fp_gunnar', at: [5, 3], leash: 30, speed: 10, bye: 'Mind the anvil.', lines: [
         "Small forge. Big hammer. Works fine.",
-        "The cold makes steel brittle. Not mine. Mine's too scared to break.",
-        "Don't lick the anvil. Up here, it licks back. Tomas found that out. We got most of his tongue back." ],
+        "Silver sings when you hammer it. Iron grunts. Gold whines. Like the people who buy it.",
+        "Aunt sends socks. Every winter. Wool. Itchy. I wear them. She checks." ],
       first: S => [ S("Hilda's work, is it? That sword. Good work. Too heavy for the mountain. Everything's too heavy for the mountain.", { type: 'choice', choices: [
           { label: 'You know Hilda?', onChoose(){ spliceNext(S("Taught her. Or she taught me. We argue about it every midwinter. By letter. The letters are very long.")); } },
           { label: 'What do you make up here?', onChoose(){ spliceNext(S("Spikes for boots, so you don't slide off the mountain. Drills for the lake, so Ingrid doesn't win everything. She still does.")); } },
@@ -16042,15 +16095,18 @@
       custom: (npc, S) => shopkeeperPages('gunnar', npc, S) },
     npc_sigrun: { name: 'Sigrun', scene: 'fp_sigrun', at: [6, 4], leash: 24, speed: 8, bye: 'Drink it warm. Always warm.', lines: [
         "Frostcap. Crunch it, steep it, drink it. Don't eat it raw. Don't ask why.",
-        "My mother brewed here. Her mother brewed here. The kettle's older than both." ],
+        "My mother brewed here. Her mother brewed here. The kettle's older than both.",
+        "Frostcap tea clears the head, warms the toes and loosens the bowels. In that order, if you're lucky.",
+        "Snowroot for courage, willowbark for headaches. Brenna's mead for both, but don't tell her I said so." ],
       first: S => [ S("Hm? Oh, a visitor. Mind the jars. Some of them are only mostly asleep.", { type: 'choice', choices: [
           { label: 'What do you brew?', onChoose(){ spliceNext(S("Tea. For the cold, for the cough, for the heart. Frostcap tea mostly. Pine salve. And one for Bjorn's feet that I won't describe.")); } },
           { label: 'Are you a witch?', onChoose(){ spliceNext(S("Pah. Grizelda's the witch. I'm a herb woman. The difference is she has a hat and I have a pension.")); } },
         ] }) ],
       custom: (npc, S) => shopkeeperPages('sigrun', npc, S) },
     npc_elin: { name: 'Elin', scene: 'fp_tomas', at: [3, 5], leash: 30, speed: 12, bye: "If you see Tomas, send him home. If he's a wolf, send him home anyway.", lines: [
-        "He wants to be a wolf. Last week he wanted to be a snowdrift. He lay in the yard for an hour.",
-        "Soup's on. Not for you. For Tomas, if he ever comes back in." ],
+        "Tomas bit the postman. Olle took it well. Olle takes everything well, he's numb from the knees down.",
+        "Peace and quiet? I've heard of it. Up on the glacier, they say. Hallvard's got all of it.",
+        "If you see Tomas howling at the moon, tell him supper's ready. Or howl it. He listens better howled." ],
       first: S => [ S("Oh! You're not Tomas. Good. I mean - hello. Sorry. He's usually the one coming through that door with snow in his ears.") ],
       custom: (npc, S) => elinPages(npc, S) },
   });
@@ -16245,7 +16301,9 @@
   TOWN.npc_sven = { name: 'Old Sven', scene: 'fp_empty_b', at: [6, 6], leash: 20, speed: 8, bye: 'Tight lines.', lines: [
       "Fifty years on that lake. Ingrid says forty-nine. Ingrid can't count.",
       "Frost pike bite at dawn. And at dusk. And whenever they like, really. They're pike.",
-      "Cold, this house. That's how I like it. Keeps the fish fresh. I'm the fish." ],
+      "Ingrid says I fall through the ice for attention. I do. Nobody visits otherwise.",
+      "Fish don't care how old you are. They bite young fingers and old fingers just the same.",
+      "Cold house, cold fish, cold feet. Warm heart. Well. Lukewarm." ],
     pig: [ "Is he for the pot? No? He looks at my bucket like it owes him money." ],
     first: S => [ S("Hm? Oh. A visitor. Nobody visits. Sit anywhere. Not there, that's the fish."), ...(svenPages(null, S) || []) ],
     custom: (npc, S) => svenPages(npc, S) };
@@ -16260,7 +16318,9 @@
     npc_ormond: { name: "Harbourmaster Ormond", scene: "desert", at: [18, 106.5], leash: 40, speed: 10, bye: "Mind the tide. Ha. Ha. ...I need a drink.", lines: [
         "Mooring fee's two copper. Ship or no ship. Want to complain? Take it up with the harbourmaster. That's me. I said no.",
         "Thirty years, not one ship. They pay me to stand on an empty beach and shout 'AHOY' at camels. Best job in the world. Worst pension.",
-        "My logbook, last entry: 'Tide out.' Under it: 'Tide not back.' Under THAT, in someone else's writing: 'Ormond smells of fish.' I know it was Gil." ],
+        "I keep the harbour shipshape. No ships, mind. But it's very much in shape.",
+        "The sea left in my first week on the job. I try not to take it personally.",
+        "One day the tide comes back. And I'll be standing right here. Charging it two copper." ],
       pig: [ "Every ship had a pig. We called ours the Captain. He tasted better than the last captain." ],
       first: S => [ S("Welcome to Seabottom harbour! Mooring fee is two copper. ...Where's your ship? Doesn't matter. Nobody's ship is here. Fee's still two copper.", { type: "choice", choices: [
           { label: "Why does everyone live in tents?", onChoose(){ spliceNext(S("We had houses once. Stone ones, with blue doors. The night the sea left, the ground sank and every single one of them fell in."),
@@ -16268,27 +16328,32 @@
           { label: "Where did the sea go?", onChoose(){ spliceNext(S("Tide went out one night and just kept going. Took every fish with it, except the slow ones. We ate those. Then we ate the seagulls. Then we stopped talking about what we ate.")); } },
         ] }) ] },
     npc_gil: { name: "Gil the Dune-Fisher", scene: "desert", at: [20.5, 104.4], leash: 36, speed: 10, bye: "Shh. You'll scare them. Or wake them. Or they're dead. Shh anyway.", lines: [
-        "Sand fish. Can't see them, can't hear them, can't catch them. It's basically my marriage, but with more sand.",
-        "Caught one once. It was a boot. There was a sock in it. Still warm. I didn't ask. I just ran.",
-        "By day I fish at the old wreck. The crew's still on board. Mostly bones. Better company than my brother-in-law. Smell better too." ],
+        "By day I fish at the old wreck. The crew's still on board. Mostly bones. Better company than my brother-in-law. Smell better too.",
+        "Ormond says I smell of fish. I don't. I've never caught one.",
+        "There's a skeleton on the wreck holding a rod. I call him Barnacle Bob. Better fisherman than me.",
+        "Patience is the angler's virtue. Mine ran out in year two. I'm running on spite now." ],
       pig: [ "Keep your pig off my bait. The last pig that ate my worms farted for three days. The camels left town." ],
       first: S => [ S("Shh! They're biting. ...Sand fish. Eleven years I've been out here. My wife left after two. Said I loved fishing more than her. I said at least the fishing doesn't nag. She took the good rod.", { type: "choice", choices: [
           { label: "Fish? In the sand?", onChoose(){ spliceNext(S("Where else? The sea left, the fish stayed. Stubborn bastards. Like me. The only difference is they're probably dead. Probably.")); } },
           { label: "Can you teach me?", onChoose(){ spliceNext(S("Teach you? I can't even teach myself. Come back when you've caught something bigger than your ego somewhere wet.")); } },
         ] }) ] },
     npc_marabel: { name: "Marabel", scene: "desert", at: [28.7, 113.7], leash: 14, speed: 10, bye: "Stay hydrated, love. Or don't. Dead people don't haggle.", lines: [
-        "Water! Fresh water! Five copper a cup, six if you want it wet, ten if you want a clean cup.",
         "Have you seen my boy? Curly hair, quick hands. If your purse is lighter, you've seen him. If your trousers are gone too, he's getting better.",
-        "The pond? Decorative. The camels piss in it. Drink up, love." ],
+        "The pond? Decorative. The camels piss in it. Drink up, love.",
+        "Water! Clean water! Well. Clean-ish. Cleaner than Tiko.",
+        "My Tiko's a good boy. Light fingers, quick feet, lies through his teeth. Just like his father, the bastard.",
+        "Price went up. Thirst went up. That's supply and demand, love. I supply, you demand.",
+        "A camel drinks thirty buckets in one go. Then pisses twenty-nine back. The pond's a cycle, love.",
+        "Single mother, three jobs, one son, no patience. Want a cup?" ],
       pig: [ "No pigs in the pond. The camels already use it as a toilet, it doesn't need a second opinion." ],
       first: S => [ S("Water! Fresh water! Five copper a cup. ...What do you mean, 'there's a pond right there'? That's decorative.", { type: "choice", choices: [
           { label: "Five copper for water?", onChoose(){ spliceNext(S("It's a desert, love. Everything else here is sand, camel dung or my son. Water's the luxury item.")); } },
           { label: "Who sells the most here?", onChoose(){ spliceNext(S("Me. Then Saffra and her spices. Then my son, who sells people their own things back. Gets the charm from me. Gets the thieving from his father, wherever that bastard ran off to.")); } },
         ] }) ] },
     npc_oona: { name: "Madame Oona", scene: "desert", at: [31.7, 106.4], leash: 22, speed: 8, bye: "I knew you were leaving. I always know. Close the flap, there's a draught up my robe.", lines: [
-        "I see... sand. Lots of sand. And a tall, dark stranger. Oh no, that's my curtain. Story of my love life.",
         "Your future holds a long journey, a short journey, and a VERY long visit to the privy after Saffra's curry. The spirits are never wrong about that one.",
-        "Something pulls at this world, stranger. The sea felt it first. I felt it second. In my bladder." ],
+        "The cards say you'll meet a pig who swears. ...Oh. You already have.",
+        "I see death in your future. Don't panic. I see it in everyone's. It's my most reliable prediction." ],
       pig: [ "The pig has a great destiny. The spirits say... bacon. Sorry, pig. I don't write them." ],
       first: S => [ S("I foresaw you coming. Also, I saw you coming. You walk like a camel with the runs. Sit. Cross my palm with copper. No, the OTHER palm, that one's sticky.", { type: "choice", choices: [
           { label: "Tell my future?", onChoose(){ spliceNext(S("You will step in something. It will be warm. It will not be sand. Wear your old boots.")); } },
@@ -16296,7 +16361,6 @@
         ] }) ] },
     npc_saffra: { name: "Saffra", scene: "desert", at: [20.5, 113.7], leash: 14, speed: 10, bye: "Come back when your nose has grown back.", lines: [
         "Cumin, saffron, pepper, and one spice so hot it's a war crime in three kingdoms.",
-        "Smell this one. No, don't. The last man who smelled it sneezed so hard he lost a tooth. And control of his bowels. Mostly the bowels.",
         "Zafir brings the spices, I bring the charm. We split it fifty-fifty. I do the counting. He can't count past his camels, and he's got four." ],
       pig: [ "Oh, a pig! I've got a rub that would go lovely on... sorry. SORRY. I've been a cook too long." ],
       first: S => [ S("Smell this. No, closer. CLOSER. ...Sorry about your eyebrows. They'll grow back. Your nose hairs won't.", { type: "choice", choices: [
@@ -16305,8 +16369,8 @@
         ] }) ] },
     npc_tiko: { name: "Tiko", scene: "desert", at: [24.9, 114], leash: 70, speed: 24, bye: "Bye! Check your pockets! I mean... bye!", lines: [
         "I didn't take it. Whatever it is. And if I did: finders keepers, losers weepers. You look like a weeper.",
-        "Mum sells water. I sell things people didn't know they'd lost. Like their purse. And their faith in people.",
-        "One day I'll find the sea and bring it back. Then I'll charge people to swim in it. And charge them again to get out." ],
+        "Mum says honesty is the best policy. Mum sells camel-pond water.",
+        "Pip in Brightwood? Amateur. He steals boots. I steal the socks out of them while you're walking." ],
       pig: [ "Can I borrow your pig? I'll bring him back. Probably. Pigs are hard to sell. They look at you." ],
       first: S => [ S("Nice purse. ...I mean, nice PERSON. You didn't drop anything. Definitely not.", { type: "choice", choices: [
           { label: "Give it back.", onChoose(){ spliceNext(S("Give WHAT back? ...Fine. Here. I only borrowed it. Also, you've got a hole in your pocket. Well. Now you have.")); } },
@@ -16315,16 +16379,18 @@
     npc_zafir: { name: "Zafir", scene: "desert", at: [30.4, 103], leash: 24, speed: 10, bye: "The camels say goodbye. They say it with spit.", lines: [
         "The camels know the way. I follow the camels. It's a system. It lost me four cousins and found me a wife I didn't want.",
         "Halfway to Puddlebottom there's our camp. One of my camels won't go further. Says he's retired. Says he's a wizard. Says a lot of things. Spits more.",
-        "Never stand behind a camel. Never stand in front of one. My uncle stood beside one and it sat down. We buried what was left under a very flat stone." ],
+        "A camel can go thirty days without water. I can go thirty days without my wife. We're both happier.",
+        "Four camels: Humphrey, Lumphrey, Grumphrey and Dave. Dave's the best. Don't tell the others.",
+        "The desert teaches you patience. And sunburn. Mostly sunburn." ],
       pig: [ "My camels hate your pig. My camels hate everyone. One of them proposed to a tent last week. Not smart animals." ],
       first: S => [ S("The camels know the way. I follow the camels. It's a system.", { type: "choice", choices: [
           { label: "Where do the camels go?", onChoose(){ spliceNext(S("North to Puddlebottom, south to... well. There used to be a south. Now it's sand and my ex-wife. So: north. Always north.")); } },
           { label: "Tell me about the camp.", onChoose(){ spliceNext(S("Halfway up the road. The old camel lives there. Tells fortunes. Better ones than Oona's, and he's sober. Don't tell her I said that. She'll see it coming anyway.")); } },
         ] }) ] },
     npc_hesk: { name: "Hesk", scene: "desert", at: [24.7, 97.6], leash: 20, speed: 12, bye: "Move along. Through the gate. The invisible one. Wipe your feet.", lines: [
-        "Nobody gets past this gate. Unless they walk round. Everyone walks round. Even the goats. The goats LAUGH at me.",
         "I'm building the wall myself. One stone a day. I'm at stone four. Stone two fell on my foot. I'm pacing myself.",
-        "Halt! ...Oh, it's you. Carry on. Halt next time, though. It makes me feel important. My wife certainly doesn't." ],
+        "Stone five tomorrow. Big day. Might take the day after off.",
+        "When the wall's done nobody can walk round. They'll climb over. Then I'll need a taller wall. Job for life." ],
       pig: [ "Is the pig on the list? There is no list. There's no wall. There's barely me. Go on in." ],
       first: S => [ S("Halt! Nobody enters Seabottom without... there's no wall, is there. I KNOW there's no wall.", { type: "choice", choices: [
           { label: "Why guard a gate with no wall?", onChoose(){ spliceNext(S("The wall fell in with the houses. The gate didn't. Me and the gate: the only two things in Seabottom still standing. Well. The gate's standing. I'm leaning.")); } },
@@ -16463,8 +16529,8 @@
   }
   { const own = TOWN.npc_ambrose.custom; TOWN.npc_ambrose.custom = (npc, S) => pagesAmbrosePages(npc, S) || (own ? own(npc, S) : null); }
   // Grandma remembers the clock (and the pie)
-  { const own = grandmaPages; grandmaPages = function(speaker){
-      if(henkStep() !== 'clock' || bwMet.has('henk_grandma')) return own(speaker);
+  { const own = grandmaPages; grandmaPages = function(speaker, npc){
+      if(henkStep() !== 'clock' || bwMet.has('henk_grandma')) return own(speaker, npc);
       markMet('henk_grandma');
       const G = text => ({ speaker, portrait: 'npc_grandma', text });
       return [ G("Henk? Oh, Henk. He slept in my back room one winter. Lovely boy. Swore a lot. In some language made of coughing."),
@@ -16478,6 +16544,7 @@
   const HENK_TOWER = [24.5, 27.3], HENK_BELL = [8.5, 42.6], HENK_DIG = [19.3, 49.4], HENK_STONES = [11, 20], HENK_ISLET = [14.5, 27.25];
   SCENES.frostpeak.decor.push(pixelProp('henk_tower', HENK_TOWER[0] * TILE, HENK_TOWER[1] * TILE, 118, 228));
   SCENES.frostpeak.decor.push(pixelProp('henk_bell', HENK_BELL[0] * TILE, HENK_BELL[1] * TILE, 60, 40));   // a decor, so it draws over the lake ice
+  { const sc = SCENES.frostpeak, k = Math.floor(HENK_BELL[0]) + ',' + Math.floor(HENK_BELL[1]); if(sc.solid) sc.solid.add(k); else sc.solid = new Set([k]); }   // 1 Oct (user: you walked through the bell)
   { const sc = SCENES.frostpeak, keys = []; for(let c = 23; c <= 25; c++) for(let r = 25; r <= 26; r++) keys.push(c + ',' + r);
     if(sc.solid) keys.forEach(k => sc.solid.add(k)); else sc.solid = new Set(keys); }
   const HENK_SEQ = ['tri', 'cir', 'cir', 'sq'], HENK_PATH = [[2, 0], [2, 1], [1, 1], [1, 2], [1, 3], [2, 3], [3, 3], [3, 4], [3, 5]];
@@ -17965,7 +18032,7 @@
     const placed = [], M = 4;
     const rectAt = (b, o) => {
       let bx = Math.round(b.sx - b.w/2 + o.dx), by = Math.round(b.topY - b.h - 8 + o.dy);
-      bx = Math.max(6, Math.min(viewW - b.w - 6, bx)); by = Math.max(6, by);
+      bx = Math.max(6, Math.min(viewW - b.w - 6, bx)); by = Math.max(6, hudTopPx ? (hudTopPx + 4) / (zoomNowGlobal || 1) : 0, by);
       return { x: bx, y: by, w: b.w, h: b.h };
     };
     const free = r => placed.every(q => r.x + r.w + M <= q.x || q.x + q.w + M <= r.x || r.y + r.h + 10 <= q.y || q.y + q.h + 10 <= r.y);
@@ -19650,14 +19717,23 @@
     return 'Explore - the townsfolk of Brightwood always need something';
   }
   let goalHintAt = 0;
+  // 1 Oct (user: speech bubbles went behind the quest tracker): how far down the top-left badges reach (goal line, XP
+  // tracker, cold meter), in screen px; layoutBubbles keeps the world's bubbles below it
+  var hudTopPx = 0;
+  function measureHudTop(){
+    const ga = document.getElementById('gameArea').getBoundingClientRect(); let b = 0;
+    for(const id of ['goalHint', 'xpTrack', 'coldBadge']){ const el = document.getElementById(id); if(el && !el.hidden && el.offsetHeight) b = Math.max(b, el.getBoundingClientRect().bottom - ga.top); }
+    hudTopPx = Math.round(b);
+  }
   function updateGoalHint(now){
     if(now - goalHintAt < 400) return; goalHintAt = now;
+    measureHudTop();
     // not over a plate at the top (shop, blackjack, a mini-game)
     const show = goalHintOn && introSeen && !battleActive && !menuIsOpen() && !shopOpen && !(fishing || chopping || mining || station || pocket || lockpick);
     if(goalHintEl.hidden !== !show) goalHintEl.hidden = !show;
     if(!show) return;
     const t = currentGoal();
-    if(goalHintEl.dataset.t !== t){ goalHintEl.dataset.t = t; goalHintEl.innerHTML = '<b>▶</b> '; goalHintEl.appendChild(document.createTextNode(t)); goalHintEl.title = t; }
+    if(goalHintEl.dataset.t !== t){ goalHintEl.dataset.t = t; goalHintEl.innerHTML = '<b class=ghArrow></b> '; goalHintEl.appendChild(document.createTextNode(t)); goalHintEl.title = t; }
   }
   goalHintEl.addEventListener('click', () => {
     if(dialogueActive || popupOpen || shopOpen || battleActive || cutsceneLocked) return;
@@ -19668,7 +19744,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.2';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.3';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -19753,6 +19829,9 @@
   let clockNow = last;
   // 1 Oct (user: the screen froze half drawn and the music stopped): one error while drawing used to stop the game for
   // good. Now the frame is drawn inside a guard; after an error the canvas is reset and the next frame tries again.
+  if(typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect)
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r){ r = Math.max(0, Math.min(Array.isArray(r) ? r[0] : (r || 0), Math.abs(w) / 2, Math.abs(h) / 2));
+      this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); };
   let frameErrors = 0;
   // 1 Oct (user, in the app: the world suddenly drawn small in the top left on green, the music gone): when an
   // iPhone runs short of memory it throws the canvases' pixels away and hands them back blank - the screen's own
@@ -20143,9 +20222,10 @@
   Object.assign(TOWN, {
     npc_leif: { name: 'Leif', scene: 'frostpeak', at: [20.5, 72.5], leash: 40, speed: 20, bye: "If a goat looks at you, don't look back. That's how Gudrun gets you.", lines: [
         "Gudrun's up on the cliff again. She's not stuck. She's THINKING. Goats think very slowly and very high up.",
-        "I've got nineteen goats. Twenty if you count Gudrun. Gudrun doesn't count herself. She thinks she's a person.",
         "Goats eat everything. Gudrun ate Bjorn's left boot. Bjorn said 'Hm.' Then he said something my mum says I'm not allowed to repeat.",
-        "No shoes? My feet are tougher than your boots. Gudrun licked them once. She was sick for a week." ],
+        "Gudrun headbutted the jarl once. The jarl headbutted her back. They're friends now. Rimewick's like that.",
+        "Goat milk, goat cheese, goat wool. I could live off goats. Mum says I smell like I do.",
+        "Gudrun ate a letter. Olle says it was important. Gudrun says it was tasty." ],
       pig: [ "Is that a pig? Can it climb? Gudrun could teach it. Gudrun could teach anything to fall off a cliff." ],
       first: S => [ S("You're not a goat. Good. I'm looking for a goat. You haven't seen a goat? Big. White. Judging you.", { type: 'choice', choices: [
           { label: 'Which goat?', onChoose(){ spliceNext(S("Gudrun. The boss goat. She climbs up cliffs nobody can climb and then shouts until I come and get her. Every. Single. Day.")); } },
@@ -20154,7 +20234,9 @@
     npc_frida: { name: 'Frida', scene: 'frostpeak', at: [18.5, 79.4], leash: 22, speed: 14, bye: "See you at the bottom. I'll be there first. I'm always there first.", lines: [
         "Nobody's beaten me down this mountain. Nobody. Not even the avalanche, and it had a head start.",
         "My dogs are called Snow and Also Snow. Snow is the fast one. Also Snow is also fast.",
-        "Crashed into Bjorn once at full speed. He said 'Hm.' I broke a rib. He didn't notice." ],
+        "Brakes are for losers. And for people who want to keep their teeth.",
+        "Snow and Also Snow had puppies. I've called them Snow Too and Still Snow.",
+        "Lost a toe on the steep run. Found it in spring. Kept it. For luck." ],
       pig: [ "Is that your sled dog? It's a pig. Pigs can't pull sleds. ...Can they? Now I want to see it." ],
       first: S => [ S("You. New face. Fast legs? No, I can see you haven't. Doesn't matter. On a sled everyone's fast. Until they hit a tree.", { type: 'choice', choices: [
           { label: 'Who are you?', onChoose(){ spliceNext(S("Frida. Fastest sled on the mountain. Also the only sled on the mountain, but I'd be fastest anyway.")); } },
@@ -20190,6 +20272,7 @@
   const RACE_W = 360, RACE_H = 460, RACE_PY = 130, RACE_LEN = 5600, RACE_K = 1.4;
   let raceOv = null;
   function openRace(){
+    pendingRace = false;   // 1 Oct: one open race clears every queued one (a first meeting now offers the race too)
     if(inAnyGame()) return;
     const wrap = document.createElement('div'); wrap.id = 'raceWrap';
     wrap.innerHTML = `<canvas width="${RACE_W}" height="${RACE_H}"></canvas><div class="raceCtl"><button type="button" class="uiBtn raceL" aria-label="Steer left"><i class="ico raceArr"></i></button><div class="raceInfo">Race to the Bottom</div><button type="button" class="uiBtn raceR" aria-label="Steer right"><i class="ico raceArr"></i></button></div>`;
@@ -20584,10 +20667,9 @@
   SCENE_MUSIC.fp_longhouse = ['tavern'];
   Object.assign(TOWN, {
     npc_ragna: { name: 'Jarl Ragna', scene: 'frostpeak', at: FP.npc.ragna, leash: 20, speed: 9, bye: 'Go. Do something saga-worthy. Or at least something Orvar can rhyme.', lines: [
-        "I am Jarl Ragna. I have ruled Rimewick for forty winters. The winters lost. Every one of them.",
         "The bell tower is empty. A longhouse without a bell is just a long house.",
-        "Hulda runs the inn. I run the village. We both know who runs whom. Don't say it.",
-        "My husband fought a bear with his bare hands. The bear won. I still have the rug. The rug is the bear." ],
+        "I settle disputes with a fair trial. Then a fight. Then a drink. The drink settles most of them.",
+        "Orvar is writing my saga. I told him keep it short. He's on volume nine." ],
       pig: [ "A pig. In my square. In MY square. ...Does it dance? The midwinter feast needs someone who dances." ],
       first: S => [ S("Stranger. You stand before the longhouse of Rimewick. Most people kneel. Your knees look stiff, so I'll allow standing.", { type: 'choice', choices: [
           { label: 'Who are you?', onChoose(){ spliceNext(S("Jarl Ragna. Chief of Rimewick, keeper of the longhouse, and the only one up here who can read a map without licking it.")); } },
@@ -20595,9 +20677,10 @@
         ] }) ] },
     npc_orvar: { name: 'Skald Orvar', scene: 'frostpeak', at: FP.npc.orvar, leash: 26, speed: 12, bye: 'Go forth! And if you die, do it dramatically. It helps the rhyme.', lines: [
         "Hear ye! A stranger came, with hair... and legs. The rest will come to me. It always comes. Eventually.",
-        "Every saga needs a hero. And a villain. And a word that rhymes with 'Rimewick'. There isn't one. I've looked.",
-        "I once sang for three days straight. The audience left on day one. I sang on out of spite.",
-        "Brenna says my songs are better after mead. Everything's better after Brenna's mead. Including me." ],
+        "Brenna says my songs are better after mead. Everything's better after Brenna's mead. Including me.",
+        "Listen! 'There once was a man from Rimewick...' That's as far as I've got. Nothing rhymes with Rimewick.",
+        "My voice is famous in seven valleys. Mostly for the avalanches.",
+        "Three cups of Brenna's mead and I'm a poet. Five and I'm a prophet. Seven and I'm on the floor, singing to Bjorn." ],
       pig: [ "A PIG! The saga writes itself! 'The pig was pink, it made a stink...' Oh, that's good. That's very good." ],
       first: S => [ S("Stop! Don't move! ...I'm memorising your face for the saga. It's a face. It'll do.", { type: 'choice', choices: [
           { label: 'A saga about me?', onChoose(){ spliceNext(S("Of course! Well. Once you've DONE something. So far it goes: 'They walked up a hill.' It needs work.")); } },
@@ -20606,18 +20689,18 @@
     npc_olle: { name: 'Olle', scene: 'frostpeak', at: FP.npc.olle, leash: 30, speed: 16, bye: "Mind the ice. And don't tell anyone what I didn't read.", lines: [
         "Up the mountain, down the mountain. Every day. My legs are the strongest thing in Rimewick. Bjorn tried to arm-wrestle them once.",
         "I never read the letters. For instance I did NOT read that Gunnar's aunt is sending him socks again. Wool. Itchy. Terrible.",
-        "The post always gets through. Snow, storms, wolves. The wolves get the parcels with sausages. That's just tax.",
-        "Hulda writes love letters to herself so she gets post. I don't know that. I never read them." ],
+        "I'm not nosy. Envelopes are just very thin up here.",
+        "Sixty letters a day, up and down the mountain. Calves like boulders. Frida wants to race them." ],
       pig: [ "Is that pig registered? Everything that walks up this mountain gets a stamp. He looks like he'd lick it." ],
       first: S => [ S("Post! Oh. You're not post. You look like post, though. A bit damp, a bit lost, nobody knows where you came from.", { type: 'choice', choices: [
           { label: 'Any post for me?', onChoose(){ spliceNext(S("For you? Although... there was a letter for 'the stranger who fell out of the sky'. I didn't read it. It said hello. And that you owe someone a goat.")); } },
           { label: 'Who are you?', onChoose(){ spliceNext(S("Olle. Postman. The only one on this mountain who's been to every door. Some doors I skip. Sigrun's. She makes me taste things.")); } },
         ] }) ] },
     npc_brenna: { name: 'Brenna', scene: 'frostpeak', at: FP.npc.brenna, leash: 16, speed: 10, bye: "Come back thirsty! Or just come back. I'll be here. Tasting.", lines: [
-        "Mead is honey, water and patience. I've got the honey and the water. The patience I drank.",
         "I taste every barrel. For quality. Every barrel is very high quality. *hic*",
-        "Bjorn says 'Hm' after my mead. Bjorn says 'Hm' after everything. But this 'Hm' is warmer.",
-        "Rule one of brewing: never brew angry. Rule two: never brew sober. Rule three: I forgot. It was a good rule." ],
+        "Rule one of brewing: never brew angry. Rule two: never brew sober. Rule three: I forgot. It was a good rule.",
+        "Mead is honey's way of saying 'sorry about the bees'.",
+        "Never trust a sober brewer. Or a sober skald. Or a sober Rimewicker. Never met one, mind." ],
       pig: [ "Oh, a piggy! Pigs love mead. Pigs love everything. We're going to be best friends, you and me. *hic*" ],
       first: S => [ S("Welcome to Brenna's Mead! Well. It's a stall. And me. And the mead, if I haven't... no, there's some left.", { type: 'choice', choices: [
           { label: 'Can I taste it?', onChoose(){ spliceNext(S("Of course! ...Oh. That one's empty. And that one. Who drank all this? Don't answer that.")); } },
@@ -21182,7 +21265,8 @@
     const show = coldArea() && !battleActive && !menuIsOpen() && !shopOpen && !station && !fishing;
     coldCv.hidden = !show; if(!show) return;
     const now = performance.now(); if(now - coldBadgeT < 120) return; coldBadgeT = now;
-    let top = 8; for(const id of ['goalHint', 'xpTrack']){ const el = document.getElementById(id); if(el && !el.hidden && el.offsetHeight) top = Math.max(top, el.offsetTop + el.offsetHeight + 6); }
+    const ga = coldCv.parentElement.getBoundingClientRect(); let top = 8;
+    for(const id of ['goalHint', 'xpTrack']){ const el = document.getElementById(id); if(el && !el.hidden && el.offsetHeight) top = Math.max(top, Math.round(el.getBoundingClientRect().bottom - ga.top + 6)); }
     coldCv.style.top = top + 'px';
     const g = coldCv.getContext('2d'); g.clearRect(0, 0, 118, 36); g.imageSmoothingEnabled = false;
     g.fillStyle = 'rgba(22,28,46,.86)'; g.beginPath(); g.roundRect(1, 1, 116, 34, 8); g.fill(); g.strokeStyle = '#c9a24a'; g.lineWidth = 2; g.stroke();
@@ -21373,12 +21457,12 @@
 
   // ---------- Hallvard, the hermit of the glacier ----------
   TOWN.npc_hallvard = { name: 'Hallvard', scene: 'fp_glacier', at: FP_SIDE.fp_glacier.hermit, leash: 24, speed: 8, bye: "Close the... there's no door. Never mind.", lines: [
-      "Thirty years on the glacier. The ice talks, if you shut up long enough. It mostly says 'cold'.",
       "The wolves leave me alone. I smell worse than they do. It's a strategy.",
-      "Rimewick thinks I'm mad. Rimewick has a jarl who wrestles bears by proxy. We're even.",
-      "I used to be a miner. Then the mine went quiet and the ice went deep. I followed the ice. Best decision I ever made. Only decision I ever made." ],
+      "The glacier creaks. I creak. We understand each other.",
+      "Nobody visits. Must be the cold. Or the smell. Or the shouting I do at visitors.",
+      "Wolves know me. Wisps know me. The little yeti knows me. People don't. Suits me." ],
     pig: [ "A pig. On a glacier. Either you're very brave or he's very lost. ...It's him, isn't it. He's lost." ],
-    first: S => [ S("Company! Sit. Not on the fire. The last one sat on the fire. The fire lost.", { type: 'choice', choices: [
+    first: S => [ S("A visitor. Out here. Either you're lost, or Rimewick finally threw you out. Warm your hands. Not ON the fire.", { type: 'choice', choices: [
         { label: 'Who are you?', onChoose(){ spliceNext(S("Hallvard. Hermit. Retired miner. Professional frowner at the sky. People from Rimewick call me 'that one'.")); } },
         { label: 'Why live out here?', onChoose(){ spliceNext(S("Quiet. Nobody asks me to fix their roof. The ice doesn't gossip. Well. It creaks. But it doesn't mean anything by it.")); } },
       ] }) ],
@@ -21386,7 +21470,6 @@
   { const t = TOWN.npc_hallvard, n = makeNpc('npc_hallvard', t.at[0], t.at[1], 0.95, t.speed, t.lines, null, t.name);
     n.anchor = { x: n.x, y: n.y }; n.anchorScene = t.scene; n.leash = t.leash; SCENES[t.scene].npcs.push(n); }
   // Rimewick points the way (user: residents say where to go; the glacier is dangerous)
-  TOWN.npc_gunnar && TOWN.npc_gunnar.lines.push("The old mine's east of the lower terrace. Iron and coal up top, silver and gold further down. And under that... ice that never melts. We stopped digging there. Ask me why. Don't, actually.");
   TOWN.npc_hulda && TOWN.npc_hulda.lines.push("Don't go west onto the glacier. Wolves, wisps, and a hermit called Hallvard. The hermit's the worst. He borrows salt and never gives it back.");
   TOWN.npc_bjorn && TOWN.npc_bjorn.lines.push("The glacier, west of the upper terrace. Best wolf pelts in the world, if you come back with your own skin still on.");
 
