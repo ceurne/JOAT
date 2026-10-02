@@ -3114,13 +3114,13 @@
       "#################",
       "#################",
       "#FFFFFFFFFFFFFFF#",
-      "#FFFFFFFFFFFFFFF#",
-      "#FFFFFFFFFFFFFFF#",
-      "#FFFFFFFFFFFFFFF#",
-      "#FFFFFFFFFFFFFFF#",
-      "#FFFFFFF.FFFFFFF#",
-      "#FFFFFF...FFFFFF#",
-      "#FF...........FF#",
+      "#.....FFFFF.....#",
+      "#F......F......F#",
+      "#.......F.......#",
+      "#..FFFFFFFFFFF..#",
+      "#.FFFFFF.FFFFFF.#",
+      "#..FFFFF.FFFFF..#",
+      "#F.............F#",
       "########D########",
     ],
     ch: { '#':T.WALL, '.':T.WOOD_FLOOR, 'D':T.DOOR, 'F':T.FURN },
@@ -3146,9 +3146,9 @@
       pixelProp('fpp_bench', 345, 284, 63, 28),
       pixelProp('fpp_bench', 408, 284, 63, 28),
       pixelProp('fpp_barrel', 44, 306, 28, 38),
-      pixelProp('fpp_barrel', 76, 312, 28, 38),
+      pixelProp('fpp_barrel', 216, 124, 28, 38),
       pixelProp('fpp_barrel', 500, 306, 28, 38),
-      pixelProp('fpp_barrel', 468, 312, 28, 38),
+      pixelProp('fpp_barrel', 328, 124, 28, 38),
     ],
   });
   const RIMEWICK_LOOT = [
@@ -4813,12 +4813,12 @@
     lair_spider: ['forest_amb'], lair_dragon: ['forest_amb'], lair_ice: ['forest_amb'] };   // round 7b: just the dripping dark
   var Music = (function(){
     const FADE = 1.2, KEEP = 2;
-    let ac = null, master = null, want = [];
+    let ac = null, master = null, want = [], duckK = 1;
     const bufs = new Map(), loading = new Map(), playing = {};
     function ctx(){
       if(ac) return ac;
       const C = window.AudioContext || window.webkitAudioContext; if(!C) return null;
-      ac = new C(); master = ac.createGain(); master.gain.value = musicPrefs.on ? musicPrefs.vol : 0; master.connect(ac.destination);
+      ac = new C(); master = ac.createGain(); master.gain.value = musicPrefs.on ? musicPrefs.vol * duckK : 0; master.connect(ac.destination);
       return ac;
     }
     function load(k){
@@ -4870,7 +4870,8 @@
       set(keys){ want = keys.slice(); apply(); },
       // browsers only allow sound after a tap/key: every gesture retries until the context runs
       unlock(){ if(!ctx()) return; if(ac.state !== 'running') wake(); apply(); },
-      volume(){ if(master) master.gain.setTargetAtTime(musicPrefs.on ? musicPrefs.vol : 0, ac.currentTime, 0.05); },
+      volume(){ if(master) master.gain.setTargetAtTime(musicPrefs.on ? musicPrefs.vol * duckK : 0, ac.currentTime, 0.25); },
+      duck(k){ if(k === duckK) return; duckK = k; this.volume(); },   // 2 Oct: much quieter while you howl at the wolf (user)
       pause(hidden){ if(!ac) return; if(hidden) ac.suspend().catch(() => {}); else wake(); },
       close(){ try{ if(ac) ac.close(); }catch(e){} ac = null; },   // round fb2: the game restarts in the page
       audio(){ return ctx(); },   // round 8: the sound effects share this context
@@ -10131,6 +10132,7 @@
     x.putImageData(im, 0, 0); snowBgCanvas = c; return c;
   }
 
+  let bpMeasAt = 0, bpTopPx = 0;
   function drawBattleScene(now){
     SHADOW_AT_FEET = true;   // round 8b: the world render sets it back
     runBattleTimers(now);
@@ -10140,7 +10142,12 @@
     const def = ENEMIES[battle.enemyId];
     // Anchored to the BOTTOM of the canvas (fixed-pixel sprites - see
     // CLAUDE.md's combat section for why a viewH fraction breaks on phones).
-    const fighterY = Math.max(viewH*0.5, viewH - 190) + 14;   // round 8b: on the ground, not on the backdrop's edge
+    // 2 Oct (user: the text box covered Balthazar and the fighters): stand them just above the command box
+    if(now - bpMeasAt > 300){ bpMeasAt = now; const bp = document.getElementById('battlePanel');
+      const top = bp && !bp.hidden && bp.offsetHeight ? bp.getBoundingClientRect().top - canvas.getBoundingClientRect().top : 0;
+      if(top && (!battle._bpTop || top < battle._bpTop)) battle._bpTop = top;   /* only ever moves up in a fight: no jumping when a line wraps */
+      bpTopPx = battle._bpTop || 0; }
+    const fighterY = Math.max(viewH*0.42, Math.min(Math.max(viewH*0.5, viewH - 190) + 14, bpTopPx ? bpTopPx - 12 : 1e9));   // round 8b: on the ground, not on the backdrop's edge
     const playerScale = PLAYER_SCALE*2.3*BATTLE_ZOOM, enemyScale = def.scale*BATTLE_ZOOM;
     // with a pet along you stand a bit further in, the pet beside you on the ground (user: it overlapped you)
     const petOut = !!(activePet() && petWith(activePet()));
@@ -16273,7 +16280,7 @@
     const got = ['sven_rod', 'sven_bucket'].filter(k => inventory[k]).length;
     return got === 2 ? 'Bring the rod and the bucket back to Old Sven in Rimewick.'
       : `Climb down into the big hole in the frozen lake and find Sven's rod and bucket in the cave under the ice (${got}/2).`; } };
-  const SVEN_ITEMS = [['sven_rod', 5, 7], ['sven_bucket', 10, 4]];   // where they landed in the ice cave (tiles)
+  const SVEN_ITEMS = [['sven_rod', 9, 8], ['sven_bucket', 10, 4]];   // where they landed in the ice cave (tiles; 2 Oct: the rod moved out of the crystals at 5,7 - user: hard to see)
   function syncSvenItems(){
     const sc = SCENES.lair_ice, q = quests.sventackle;
     sc.items = sc.items.filter(it => !it.uid.startsWith('sven_'));
@@ -19744,7 +19751,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.4';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.5';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -21572,6 +21579,7 @@
       { at: [16, 5.7], item: 'item_fish_frostpike', w: 29, h: 12, look: () => pigOr("Sushi on a stick. A very cold, very big stick.", 'A frostpike, frozen mid-yawn. It looks like it was about to say something. Probably "oh no".') },
       { at: [20, 5.9], item: 'item_boot_left', w: 32, h: 26, look: () => [ narrate('One boot, frozen solid. The foot is still in it.'), narrate('Not really. Probably. You decide not to check.') ] },
       { at: [6.2, 9.4], item: 'item_iron_sword', w: 27, h: 27, look: () => [ narrate('A sword, frozen point-down in the ice. Someone was very sure of himself.'), narrate('Someone is now very much part of the glacier.') ] },
+      { at: [26.8, 7.0], item: 'item_ring_gold', w: 27, h: 27, look: () => pigOr("Shiny. Is it edible? No? Then I don't care. ...Is it, though?", 'A gold ring, frozen in the ice. Somebody proposed on a glacier. Judging by where the ring ended up, the answer was no.') },   // 2 Oct round 2 pick: the ring
     ];
     const blockPath = (x, y, w, h) => { ctx.beginPath(); ctx.moveTo(x + 4, y + 10); ctx.lineTo(x + 14, y + 2); ctx.lineTo(x + w - 6, y + 4); ctx.lineTo(x + w - 2, y + 16);
       ctx.lineTo(x + w - 4, y + h - 4); ctx.lineTo(x + 6, y + h - 2); ctx.lineTo(x + 2, y + h - 14); ctx.closePath(); };
@@ -23114,6 +23122,9 @@
     return { open, close, get cur(){ return cur; } };
   })();
   // </generated: fq games>
+  // 2 Oct (user: the music drowns the wolf): while the howl-off is open the music drops to a whisper
+  setInterval(() => { try{ const howl = !!(FQ.cur && FQ.cur.name === 'saga' && document.querySelector('#fq_sagaTabs [data-d="wolf"].on'));
+    Music.duck(howl ? 0.12 : 1); }catch(e){} }, 300);
 
   requestAnimationFrame(frame);
 
