@@ -1121,6 +1121,32 @@
   #fqWrap .ar.u{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAYAAAAmL5yKAAAAgUlEQVR4nGNgoCUQ01D6LyInk4dPDRNNbS844vGfkCuwukBMQ+l/1Bw1BgYGBoaoOWoMTFxsE3EZQrEXMAwQ01D6P+dAGIqYVoYQTlegGIBNMyFDUAy4cGkZ8W5HN0BMQ+k/IcXYXMEE04zL6YQMoW4snHm3gWQDWGCMFIdVZLkAABQYJb2A8WS4AAAAAElFTkSuQmCC); }
   #fqWrap .ar.d{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAYAAAAmL5yKAAAAm0lEQVR4nGNkYGBgEJGTyWPiYpvIQCJ4deMeIwuygFaGEIoCAxMRONtJxQBFLsVhFQMDAwMDE6m2mggFoPBJNgAdMDEwMDC8efRk0r9vv/KvzXhHlKYUh1UMr27cY0RxASmGwDSjGEAsMNCLQuGjGEDIFchOx+kCXIZg04zVAKoBETmZPDENpf8FRzz+i2ko/afIEHxqaOcFYgEAsYJC2Pae8ccAAAAASUVORK5CYII=); }
   /* </generated: fq css> */
+  /* 3 Oct (user pick B for every minigame: "full screen in the game's own style"): a snowy sky behind, the title on a
+     ribbon, the game framed in gold, the text in a slate box like a conversation, the buttons under it. Kept OUTSIDE the
+     generated fq css block so tools/build_fq_games.py can rebuild that block without losing this */
+  #fqWrap{ background: linear-gradient(180deg, #2b3d5c 0%, #4d6d92 38%, #b9cde0 74%, #e8f0f6 100%); padding:40px 10px 12px; gap:10px; }
+  #fqWrap::before{ content:''; position:absolute; inset:0; pointer-events:none; opacity:.55;
+    background-image: radial-gradient(#fff 1px, transparent 1.5px), radial-gradient(#fff 1px, transparent 1.5px); background-size: 37px 41px, 53px 59px; background-position: 0 0, 19px 23px; }
+  #fqWrap > *{ position:relative; }
+  #fqWrap .fqTitle{ align-self:center; width:auto; max-width:calc(100% - 20px); height:31px; line-height:31px; padding:0 40px; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; box-sizing:border-box;
+    border:0 solid transparent; border-image: var(--ui-ribbon-blue) 0 31 0 31 fill / 0 31px 0 31px stretch; image-rendering:pixelated; color:#fff; text-shadow:0 2px 0 #1b3a4a; font-size:22px; }
+  #fqWrap canvas{ max-height:38vh; width:auto; max-width:100%; align-self:center; border-radius:0; box-shadow: 0 0 0 4px #2a2030, 0 0 0 7px #c9a24a, 0 8px 18px rgba(0,0,0,.35); }
+  #fqWrap .out{ box-sizing:border-box; min-height:84px; padding:16px 18px 12px; font:20px 'Jersey 10', monospace; line-height:1.15; color:#f3e3c0;
+    border:8px solid transparent; border-image: var(--ui-slate) 44 55 43 55 fill / 44px 55px 43px 55px stretch; image-rendering:pixelated; order:5; }
+  #fqWrap .ctl{ order:6; flex-wrap:wrap; }
+  #fqWrap .ctl .fqBig{ flex:1 0 auto; padding:0 12px; }   /* as wide as its words; a row wraps rather than cutting them off */
+  #fqWrap .out:empty{ display:none; }
+  #fqWrap .pickrow{ justify-content:center; }
+  #fqWrap .pickrow button{ font:18px 'Jersey 10', monospace; border-radius:0; padding:4px 12px 8px;
+    border:6px solid transparent; border-image: var(--ui-btn-grey) 11 11 16 11 fill / 6px 6px 9px 6px stretch; background:none; color:#2a2030; image-rendering:pixelated; }
+  #fqWrap .pickrow button.on{ border-image-source: var(--ui-btn-blue); color:#fff; }
+  #fqWrap .goal{ background:rgba(42,36,56,.85); }
+  /* 3 Oct (user: "die pijltjes zijn helemaal niet mooi"): chunky outlined pixel arrows (scratchpad mg/arrows.py) */
+  #fqWrap .ar, #fqWrap .ar.u, #fqWrap .ar.d, #fqWrap .fqBig .ar, #fqWrap .fqBig .ar.u, #fqWrap .fqBig .ar.d{ width:30px; height:30px; flex:0 0 auto; }
+  #fqWrap .ar.r{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA1klEQVR4nGNgGGyAkZACaSuv/zD202PbcKpnIsa2J0e3YhhKlkG/P98naBjcqfhsu79jCgMDAwMDK68ig4y1NwMDAx5vSlt5/ccFfn26B8f/////L23l9R/dYhSv/f58HysmxptEhRE6QDaMR0FnGtkGMTAwMFw/uhCFT5ZBdy4dYnAtW4UixoKuABtQ0bPDasjHZ4+mw8RJin5shnx5cCULxUVPj21jhAUcMuCXksskZAhRQNrK6/+1IwvgaYdHQWcaNgtJyrT4XELQIAYGRFrBZQhVAQCyyKIFJkDbOQAAAABJRU5ErkJggg==); }
+  #fqWrap .ar.l{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA10lEQVR4nGNgGGyAEZ+ktJXXfxj76bFteNUyETLkydGtDAwMDAw8CjrTSDYI2ZDfn+/j0w8HGM7FZoiiRw5OA7B6WdrK67+0ldf////////16R4c4wLSVl7/YV5mIcY7xHgPJYxICRO8Bl0/upAsQzAMci1bxXDn0iGyDIKH0dNj2xilrbz+u5atYtjdxcCgomcHV0SM4Tijf3dXGNwwfNH/8dmj6V8eXMliQZfA5bKPzx5NJ+gsbACWpq4dWYCSXnABnHkNlmJdy1YRZTGG19ANI+QSqgMATm6K+bK0l9gAAAAASUVORK5CYII=); }
+  #fqWrap .ar.d{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAzElEQVR4nGNgGGyAEZugtJXXf3yanh7bhlUfVoNwAWkrr/88CjrT0PWw4DLs9+f7RFkKA0wkqR5SBsHDiFBMIQN+KblMfim5TAYGLDGIHlO/Pt3DinHFIIrXZKy9Ga4fXYg3xn5/vs9w/ehCBhlrbxRxuEEwJ7qWrWK4c+kQToPuXDrE4Fq2ioGBgYHh47NH0zEMIsYwbIZ8eXAlC8MgfIbhM4SBAUdeY2BAxOLurjAGmMG4DMFrELJhMIDLEIIGMTAwMKBnUGyGUBUAAL4Bq7K87gKkAAAAAElFTkSuQmCC); }
+  #fqWrap .ar.u{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAxElEQVR4nGNgGGyAEZ+ktJXXf2T+02PbcKpnImTIk6NbGZ4c3YrVYIIGIRvy+/N9ht+f7xM0DMMgdENggJBhKAbhMoQYw+AGETKEkGEoLnpydCvD9aMLGe5cOoTToDuXDjFcP7oQbhiPgs40BgYGBhZkRTLW3nD2/R12WA1yLVsFZa1CEYcb9PTYNkaY6fxScpk4ncTAwPDx2aPp6GIoLvry4EoWMQYhq4UBnAmSVEA1g1hwSeCLOZIMQsQOBQYhxyDdAQACEms9BqiUmAAAAABJRU5ErkJggg==); }
   #skillPanel .recipes{ display:flex; flex-direction:column; gap:5px; margin:6px 0 2px; max-height:230px; overflow-y:auto; flex:1 1 auto; min-width:0; scrollbar-width:none; overscroll-behavior:contain; }
   #skillPanel .recipes::-webkit-scrollbar{ display:none; }
   #skillPanel .recWrap{ display:flex; gap:6px; align-items:stretch; }
@@ -19751,7 +19777,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.5';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.6';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -22494,7 +22520,7 @@
   const b1 = document.getElementById('fq_sagaA'), b2 = document.getElementById('fq_sagaB'), tabs = document.getElementById('fq_sagaTabs');
   let deed = 'eagle', done = new Set(FQ_OPTS.done || []), say = null, last = performance.now();
   // eagle
-  let eT = 0, feather = null, peck = 0;
+  let eT = 0, eDir = 1, feather = null, peck = 0;
   // waterfall
   let swimX = 0, breath = 1, found = false, swimT = 0, caveT = 0;
   // wolf: the howl-off. The white wolf howls a pattern (short / long), you howl it back with the Howl button
@@ -22515,7 +22541,7 @@
   const LIE = ['With eyes of fire and arms of steel,', 'the stranger made the eagle kneel!', 'They swam through ice for seven days,', 'and set the frozen falls ablaze!', 'The white wolf begged, the mountain wept,', 'the stranger yawned, and then they slept.'];
   function act(which){
     const now = performance.now();
-    if(deed === 'eagle' && which === 1){ if(feather) return; const far = Math.cos(eT) < -.55;   // round 4 (user): a little harder
+    if(deed === 'eagle' && which === 1){ if(feather) return; const far = Math.cos(eT) < -.72;   // round 4 (user): a little harder; 3 Oct: harder again (smaller window)
       if(far){ feather = { t: now }; play('pickup', .5); setTimeout(() => win('eagle', 'An eagle feather. The eagle has opinions about this. Loud ones.'), 900); speak('you', 'Got it! Now: run.'); }
       else { peck = 1; play('hit', .5); speak('you', pick(['OW. She is very close. And very eagle.', 'Pecked. In the ear. Noted.'])); } }
     if(deed === 'falls' && which === 1){ if(found) return; swimX = Math.min(1, swimX + .07); swimT = .25; play('swim', .45);
@@ -22579,7 +22605,7 @@
   addEventListener('keydown', e => { if(e.key === ' ' && deed === 'wolf' && onScreen(cv) && !e.repeat && !(e.target.closest && e.target.closest('textarea'))){ e.preventDefault(); act(1); } });
   addEventListener('keyup', e => { if(e.key === ' ') release(); });
   function update(dt, now){
-    if(deed === 'eagle'){ eT += dt * 1.35; peck = Math.max(0, peck - dt * 2); }
+    if(deed === 'eagle'){ if(Math.random() < dt * .22) eDir = -eDir; eT += dt * eDir * (1.45 + .45 * Math.sin(now / 1300)); peck = Math.max(0, peck - dt * 2); }
     if(deed === 'falls' && !found){ breath = Math.max(0, breath - dt * .09); swimT = Math.max(0, swimT - dt); if(swimX > 0 && swimT <= 0) swimX = Math.max(0, swimX - dt * .03);
       if(breath <= 0){ play('ice', .5); speak('you', 'BRR. Too cold. Out, out, out. Again!', 2000); swimX = 0; breath = 1; } }
   }
