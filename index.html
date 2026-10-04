@@ -9421,7 +9421,7 @@
           return;
         }
         battle.playerHp = Math.max(0, battle.playerHp - dmg);
-        landHit('player', dmg, mv.hitColor);
+        landHit('player', dmg, mv.hitColor); (battle.hitBy || (battle.hitBy = {}))[name] = 1;
         addBattleFx(mv.burst ? { type:'burst', actor:'player', color: mv.burst } : { type:'spark', actor:'player' });
         setBattleLog(`The ${def.name} hits you for ${dmg} damage!${soft ? ' (It is still sulking about the insult.)' : armor ? ` Your ${equipment.shield ? 'shield' : 'armour'} takes the edge off.` : ''}`);
         if(mv.effect === 'web'){ battle.webbed = true; addBattleFx({ type:'num', actor:'player', text:'Stuck!', color:'#e8e8f0' }); setBattleLog(`The web wraps round you! ${dmg} damage, and you can't move next turn.`); }
@@ -9429,7 +9429,7 @@
         if(mv.effect === 'freeze' && Math.random() < 0.4){ battle.webbed = 'ice'; battle.iceAt = performance.now(); addBattleFx({ type:'num', actor:'player', text:'Frozen!', color:'#bfe8ff' }); setBattleLog(`The ice closes round you! ${dmg} damage, and you're frozen to the spot.`); }
         if(mv.effect === 'poison'){ battle.poison = 3; addBattleFx({ type:'num', actor:'player', text:'Poisoned!', color:'#9be35a' }); setBattleLog(`${dmg} damage, and the poison burns. It'll sting for a while.`); }
       } else {
-        landMiss('player');
+        landMiss('player'); areaEv('dodge', name);
         if(mv.burst) addBattleFx({ type:'burst', actor:'player', color:'smoke' });
         setBattleLog(`The ${def.name} misses!`);
       }
@@ -12025,7 +12025,7 @@
     if(capped) net = Math.max(0, room);
     if(net >= 0) addCoins(bj.bet + net);   // stake back + winnings (a push: just the stake)
     const t = bjToday(); t.won += net; saveBj();
-    bj.cls = net > 0 ? 'win' : net < 0 ? 'lose' : '';
+    bj.cls = net > 0 ? 'win' : net < 0 ? 'lose' : ''; if(net > 0 || kind === 'bj') areaEv('bj_win');
     bj.result = kind === 'bj' ? `Blackjack! +${net} copper` : net > 0 ? `You win! +${net} copper` : net < 0 ? (kind === 'bust' ? `Bust! -${-net} copper` : `You lose. -${-net} copper`) : 'A push. Your bet comes back.';
     bj.msg = line || bjPick(D[kind === 'dbust' ? 'dbust' : kind]);
     if(bjCleanedOut()) bj.msg = (capped ? "That's all the house had left. " : '') + (bj.who === 'npc_whitejack' ? "You've cleaned me out, friend. Come back tomorrow." : "You've cleaned us out, friend. Come back tomorrow.");
@@ -12102,7 +12102,7 @@
       shop._quip = `Sold ${def.name} for ${formatPrice(row.price)}.`;
     } else {
       addCoins(-row.price);
-      inventory[row.id] = (inventory[row.id] || 0) + 1; saveInventory();
+      inventory[row.id] = (inventory[row.id] || 0) + 1; saveInventory(); areaEv('buy', shop.keeper, row.id);
       const said = shop.quip && shop.quip.bought && shop.quip.bought[row.id];
       // round 6 (user): gear is never put on for you - it goes in the bag
       shop._quip = def.slot ? `Bought ${def.name}. Wear it via Menu > Gear. ${said || ''}` : `Bought ${def.name}. ${said || ''}`;
@@ -14625,7 +14625,7 @@
       S.swingT = performance.now(); S.shots++;
       aimShots.push({ t0: performance.now(), res, x0: player.x, y0: player.y - 26, x1: (AIM_TARGET.c + 0.5) * TILE + (res === 'miss' ? (Math.random() < 0.5 ? -1 : 1) * 30 : 0),
         y1: (AIM_TARGET.r + 1) * TILE - 24 });
-      if(res !== 'miss') S.hits++; if(res === 'perfect') S.perf++; else S.flawed = true;
+      if(res !== 'miss') S.hits++; if(res === 'perfect'){ S.perf++; areaEv('bullseye'); } else S.flawed = true;
       skillPanel.querySelectorAll('.pips i').forEach((el, i) => { el.classList.toggle('on', i < S.shots && i >= S.shots - 1 ? res !== 'miss' : el.classList.contains('on')); if(i === S.shots - 1 && res === 'miss') el.classList.add('bad'); });
       skillPanel.querySelector('.msg').textContent = res === 'perfect' ? 'Bullseye!' : res === 'hit' ? 'Hit!' : 'Whoosh. Missed.';
       if(S.shots >= S.recipe.shots){
@@ -19777,7 +19777,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v146.6';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v147';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -21617,7 +21617,7 @@
         blockPath(sx, sy, W, H); ctx.fillStyle = 'rgba(214,240,255,.38)'; ctx.fill();
         ctx.fillStyle = '#ffffff'; ctx.fillRect(sx + 10, sy + 6, W - 20, 2); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(sx + W - 8, sy + 10, 1, H - 20); } });
       solid(Math.floor(f.at[0]), Math.floor(f.at[1]));
-      look(bx, by - 8, 32, f.look); }
+      look(bx, by - 8, 32, () => (areaEv('frozen', f.item), f.look())); }
     // Hallvard's ice statues of Rimewick, on little ice plinths
     const statue = n => { let c = glacCache.get(n); if(c) return c;
       c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -21791,8 +21791,8 @@
       ctx.fillStyle = 'rgba(40,60,90,0.18)'; ctx.beginPath(); ctx.ellipse(sx + 32, sy + 61, 20, 4, 0, 0, 7); ctx.fill();
       if(flip){ ctx.save(); ctx.translate(sx + 64, sy); ctx.scale(-1, 1); drawSprite(name, 0, 0, 64, 64); ctx.restore(); } else drawSprite(name, sx, sy, 64, 64); } });
     fpSolid(c, r);
-    HOTSPOTS.push({ scene: 'frostpeak', x, y, r: 40, label: 'Pet', pages: () => [ narrate(pickOne(["The husky rolls over for a belly rub. It's the warmest thing on the mountain.",
-      "The husky sniffs your hand, decides you're not food, and goes back to sleep.", "The husky howls in your face. Affectionately. Probably."])) ] });
+    HOTSPOTS.push({ scene: 'frostpeak', x, y, r: 40, label: 'Pet', pages: () => (areaEv('husky'), [ narrate(pickOne(["The husky rolls over for a belly rub. It's the warmest thing on the mountain.",
+      "The husky sniffs your hand, decides you're not food, and goes back to sleep.", "The husky howls in your face. Affectionately. Probably."])) ]) });
   }
   { const R = MANIFEST.race_sled; if(R){ FPX.decor.push(pixelProp('race_sled', 17.5 * TILE, 56 * TILE - 3, R[2], R[3])); fpSolid(17, 55); } }
   // two reindeer, wandering along the upper terrace below the golem's bend
@@ -23151,6 +23151,355 @@
   // 2 Oct (user: the music drowns the wolf): while the howl-off is open the music drops to a whisper
   setInterval(() => { try{ const howl = !!(FQ.cur && FQ.cur.name === 'saga' && document.querySelector('#fq_sagaTabs [data-d="wolf"].on'));
     Music.duck(howl ? 0.12 : 1); }catch(e){} }, 300);
+  // ---------- AREA TASKS (4 Oct, user's picks on the task panel: their own "Tasks" tab next to Quests, the three lists as
+  // drafted, four tiers, a few vague ones Balthazar can hint at, and a list only shows once you've been to its area).
+  // A task is done by an event (areaEv, called from the places things happen) or by a check on the game state (atPoll).
+  // Every finished tier pays out with a popup; done tasks are kept in open_world_area_tasks (so the save code has them).
+  const AT_KEY = 'open_world_area_tasks', AT_TIERS = ['Easy', 'Medium', 'Hard', 'Elite'];
+  let atState = { done: {}, seen: {}, paid: {}, n: {}, sets: {}, hints: {}, potionDay: '' };
+  try{ atState = Object.assign(atState, JSON.parse(localStorage.getItem(AT_KEY)) || {}); }catch(e){}
+  const atSave = () => { try{ localStorage.setItem(AT_KEY, JSON.stringify(atState)); }catch(e){} };
+  const atBw = s => ['outdoor', 'village', 'misty_forest', 'brightwood', 'house_interior', 'grandma_house', 'smith_house', 'farm_house', 'mayor_house', 'tavern', 'wizard_house', 'lair_spider'].includes(s) || /^bw_/.test(s);
+  const atFen = s => s === 'fenmire' || s === 'lair_dragon' || /^fen_/.test(s);
+  const atFp = s => s === 'frostpeak' || s === 'lair_ice' || /^fp_/.test(s);
+  const AREA_TASKS = {
+    brightwood: { name: 'Brightwood', sub: 'Home, Puddlebottom, the forest and Brightwood', icon: 'item_bronze_coin', inArea: atBw, opens: s => s === 'brightwood' || /^bw_/.test(s),
+      tiers: {
+        Easy: [
+          { id: 'bw_pet', text: 'Pet Balthazar three times. He will pretend he hates it.', count: 3 },
+          { id: 'bw_fish', text: 'Catch a fish in the Puddlebottom river.' },
+          { id: 'bw_cake', text: "Buy a honey cake from Rosie. Don't let the pig see it." },
+          { id: 'bw_bull', text: "Hit a bullseye on Eldrin's target." },
+          { id: 'bw_hello', text: 'Say hello to every shopkeeper in Brightwood: Olaf, Rosie, Hilda, Kurt and Greta.', set: ['npc_olaf', 'npc_rosie', 'npc_hilda', 'npc_kurt', 'npc_greta'] },
+          { id: 'bw_chop', text: 'Chop a tree in the forest. Mind your feet.' } ],
+        Medium: [
+          { id: 'bw_bj', text: 'Win a hand of blackjack.' },
+          { id: 'bw_sword', text: "Forge an iron sword at Hilda's anvil." },
+          { id: 'bw_pip', text: "Pick Pip's pocket. He will be proud." },
+          { id: 'bw_catfish', text: 'Catch the whiskered catfish.' },
+          { id: 'bw_gossip', text: "Hear all five of Greta's rumours.", set: [0, 1, 2, 3, 4] } ],
+        Hard: [
+          { id: 'bw_brood', text: 'Defeat the Broodmother without eating or drinking anything.' },
+          { id: 'bw_cook30', text: 'Reach Cooking 30.', check: () => skillLevel('cooking') >= 30 },
+          { id: 'bw_carp', text: 'Catch a golden carp in the hidden pond.' },
+          { id: 'bw_pages', text: "Find all of Henk's lost pages.", check: () => !!(quests.pages && quests.pages.state === 'done') } ],
+        Elite: [
+          { id: 'bw_broodpig', text: 'Defeat the Broodmother with Balthazar fighting at your side.' },
+          { id: 'bw_book', text: 'Fill a whole page of your Collection Book.', check: () => book.done.length > 0 },
+          { id: 'bw_baron', vague: true, text: 'Make Baron Puffington say "thank you". Nobody ever has.',
+            hints: ['The Baron never thanks anyone for anything they give him. He thinks it was his already.', "But what if you gave him back something he didn't know he'd lost?", "Pick the Baron's pocket. Then go and tell him he dropped something."] } ] },
+      rewards: { Easy: { text: "Rosie's loyalty card: 10% off everything at her bakery" }, Medium: { text: 'The Brightwood Cape (-1 damage taken)', item: 'bw_cape' },
+        Hard: { text: '+10% XP for everything you do in Brightwood, Puddlebottom and the forest' }, Elite: { text: 'The title "Pride of Brightwood", and a statue of you and the pig on the square' } } },
+    fenmire: { name: 'The Fenmire', sub: "The swamp, the bog and Grizelda's tower", icon: 'skill_magic', inArea: atFen, opens: atFen,
+      tiers: {
+        Easy: [
+          { id: 'fen_carp', text: 'Catch a carp in the swamp.' },
+          { id: 'fen_compliment', text: "Compliment Grizelda's moustache. Survive." },
+          { id: 'fen_myrtle', text: 'Pick bog myrtle at the stone circle.' },
+          { id: 'fen_frog', vague: true, text: 'Find the frog that knows your name.',
+            hints: ['Frogs like water. And lilies. And not being stepped on.', 'There is a pool full of lilies on the west side of the swamp.', 'Walk along the edge of the Lily Pool, on the west side of the Fenmire. Look down.'] },
+          { id: 'fen_cook', text: "Cook something on Grizelda's campfire." } ],
+        Medium: [
+          { id: 'fen_brew', text: "Brew something in Grizelda's cauldron." },
+          { id: 'fen_kills', text: 'Win 20 fights in the Fenmire.', count: 20 },
+          { id: 'fen_herbs', text: 'Gather 10 plants in the Fenmire.', count: 10 },
+          { id: 'fen_gerald', text: 'Get Gerald to croak on the beat (bond level 7).', check: () => !!pets.owned.gerald && petLevel('gerald') >= 7 } ],
+        Hard: [
+          { id: 'fen_dragon', text: 'Defeat the Mire Dragon.' },
+          { id: 'fen_cloud', text: "Dodge the dragon's poison cloud twice in one fight." },
+          { id: 'fen_alch30', text: 'Reach Alchemy 30.', check: () => skillLevel('alchemy') >= 30 } ],
+        Elite: [
+          { id: 'fen_nodive', text: 'Defeat the Mire Dragon without its dive ever hitting you.' },
+          { id: 'fen_blush', vague: true, text: 'Make Grizelda blush.',
+            hints: ['Witches are people too. Mostly. They like nice things.', 'Flowers. A rare one. One that only shows its face at night.', 'Bring Grizelda a moonflower from the stone circle (Foraging 16).'] } ] },
+      rewards: { Easy: { text: 'Bog Boots (-1 damage taken)', item: 'bog_boots' }, Medium: { text: 'Grizelda brews you a free potion every day. Ask her.' },
+        Hard: { text: 'Gerald learns a new trick: a free bond level' }, Elite: { text: 'The title "Bog Royalty", and a crown of reeds', item: 'reed_crown' } } },
+    frostpeak: { name: 'Frostpeak', sub: 'Rimewick, the mountain, the glacier and the old mine', icon: 'item_mead', inArea: atFp, opens: atFp,
+      tiers: {
+        Easy: [
+          { id: 'fp_fire', text: "Warm your hands at the bonfire on Rimewick's square." },
+          { id: 'fp_dog', text: "Pet one of Bjorn's sled dogs." },
+          { id: 'fp_mead', text: 'Help Brenna brew the mead.', check: () => !!(quests.mead && (quests.mead.brewed || quests.mead.state === 'done')) },
+          { id: 'fp_snowman', text: "Build a snowman for Tomas's contest.", check: () => !!(quests.snowcontest && quests.snowcontest.state === 'done') },
+          { id: 'fp_frozen', text: 'Find all four things frozen in the glacier.', set: ['item_fish_frostpike', 'item_boot_left', 'item_iron_sword', 'item_ring_gold'] } ],
+        Medium: [
+          { id: 'fp_race', text: 'Beat Frida in the sled race.', check: () => !!(quests.sledrace && quests.sledrace.wins >= 1) },
+          { id: 'fp_skate', text: 'Skate the figures for Old Ingrid.', check: () => !!(quests.figures && quests.figures.state === 'done') },
+          { id: 'fp_bjorn', vague: true, text: 'Make Bjorn laugh.',
+            hints: ['Bjorn only laughs at people who are worse at something than he is.', 'What is Bjorn best at? Not feeling the cold.', 'Get really cold outside (all three pips on the snowflake), then talk to Bjorn.'] },
+          { id: 'fp_pike', text: 'Catch a frost pike through a hole in the ice.' } ],
+        Hard: [
+          { id: 'fp_wolf', text: 'Out-howl the white wolf on your first try.' },
+          { id: 'fp_eagle', text: "Grab the eagle's feather on your first try." },
+          { id: 'fp_horror', text: 'Defeat the Frost Horror.' } ],
+        Elite: [
+          { id: 'fp_race10', text: 'Beat Frida in the sled race ten times.', check: () => !!(quests.sledrace && quests.sledrace.wins >= 10) },
+          { id: 'fp_storm', text: 'Reach the top of the mountain in a snowstorm.' },
+          { id: 'fp_alone', text: 'Defeat the Frost Horror without a pet and without eating or drinking anything.' } ] },
+      rewards: { Easy: { text: 'Hand warmers: the cold creeps up slower' }, Medium: { text: "Bjorn's snowshoes: you walk faster on Frostpeak" },
+        Hard: { text: "Hallvard's wolf-fur hat: the cold creeps up much slower", item: 'hallvard_hat' }, Elite: { text: 'The title "Frostborn", and Snowball the yeti comes to visit your home' } } },
+  };
+  Object.assign(ITEMS, {
+    bw_cape: { name: 'The Brightwood Cape', icon: 'item_silk_cape', unique: true, slot: 'back', layers: { back: ['cape_silk_bg'], front: ['cape_silk_fg'] },
+      bonus: { armor: 1 }, bonusText: '-1 damage taken', desc: 'Blue, with the town crest. Wexley salutes you now. Badly' },
+    bog_boots: { name: 'Bog Boots', icon: 'item_boot_wellie', unique: true, slot: 'boots', bonus: { armor: 1 }, bonusText: '-1 damage taken', desc: "Grizelda's old wellies. Something lives in the left one. It's friendly" },
+    reed_crown: { name: 'Crown of Reeds', icon: 'item_bog_myrtle', desc: 'Woven by Grizelda. Royalty of the bog. The frogs bow. Well. They sit' },
+    hallvard_hat: { name: "Hallvard's Wolf-Fur Hat", icon: 'item_wolf_ears', unique: true, slot: 'head', bonusText: 'the cold creeps up much slower', desc: 'He wore it up the glacier for thirty winters. It smells like it' },
+  });
+  if(typeof GEAR_VALUE !== 'undefined') Object.assign(GEAR_VALUE, { bw_cape: 0, bog_boots: 0, hallvard_hat: 0 });
+  const atAll = () => Object.entries(AREA_TASKS).flatMap(([a, A]) => AT_TIERS.flatMap(tier => A.tiers[tier].map(t => ({ a, tier, t }))));
+  const atFind = id => atAll().find(x => x.t.id === id);
+  const atTierDone = (a, tier) => AREA_TASKS[a].tiers[tier].every(t => atState.done[t.id]);
+  const atPaid = (a, tier) => !!atState.paid[a + '_' + tier];
+  function atDone(id){
+    if(atState.done[id]) return;
+    const f = atFind(id); if(!f) return;
+    atState.done[id] = Date.now(); atSave();
+    if(atState.seen[f.a]){
+      showToast(`Task done: ${f.t.text}`); Sfx.play('quest');
+      if(atTierDone(f.a, f.tier)) setTimeout(() => atPayout(f.a, f.tier), 900);
+    }
+  }
+  function atCount(id, n){ const f = atFind(id); if(!f || atState.done[id]) return;
+    atState.n[id] = (atState.n[id] || 0) + (n || 1); atSave(); if(atState.n[id] >= f.t.count) atDone(id); }
+  function atMark(id, key){ const f = atFind(id); if(!f || atState.done[id]) return;
+    const s = atState.sets[id] || (atState.sets[id] = []); if(!s.includes(key)){ s.push(key); atSave(); }
+    if(f.t.set.every(k => s.includes(k))) atDone(id); }
+  // a finished tier pays out once (the popup's close gives the reward)
+  function atPayout(a, tier){
+    if(atPaid(a, tier) || !atTierDone(a, tier)) return;
+    atState.paid[a + '_' + tier] = Date.now(); atSave();
+    const A = AREA_TASKS[a], R = A.rewards[tier], coins = { Easy: 50, Medium: 120, Hard: 250, Elite: 500 }[tier];
+    const next = AT_TIERS[AT_TIERS.indexOf(tier) + 1];
+    queuePopup({ kind: 'done', label: 'Tier complete', title: `${A.name} Tasks: ${tier}`, rows: [`Every ${tier.toLowerCase()} ${A.name} task done!`, R.item ? { item: R.item, text: R.text } : R.text, { icon: 'coin', text: `+${coins} copper` },
+        next ? `Next: the ${next} tasks.` : `That's every ${A.name} task. Balthazar is speechless. For once.`],
+      onClose(){ addCoins(coins); if(R.item) grantItem(R.item, 1); atReward(a, tier); } });
+  }
+  function atReward(a, tier){
+    if(a === 'brightwood' && tier === 'Elite'){ markMet('title_pride'); if(!activeTitle()) setTitle('pride'); }
+    if(a === 'fenmire' && tier === 'Elite'){ markMet('title_bogroyal'); if(!activeTitle()) setTitle('bogroyal'); }
+    if(a === 'frostpeak' && tier === 'Elite'){ markMet('title_frostborn'); if(!activeTitle()) setTitle('frostborn'); }
+    if(a === 'fenmire' && tier === 'Hard' && pets.owned.gerald) gainPetXp(400, 'gerald');
+  }
+  const _atTitles = earnedTitles;
+  earnedTitles = function(){ const out = _atTitles();
+    if(bwMet.has('title_pride')) out.push({ id: 'pride', name: 'Pride of Brightwood', address: 'Pride of Brightwood', from: 'Every Brightwood task' });
+    if(bwMet.has('title_bogroyal')) out.push({ id: 'bogroyal', name: 'Bog Royalty', address: 'Your Bogness', from: 'Every Fenmire task' });
+    if(bwMet.has('title_frostborn')) out.push({ id: 'frostborn', name: 'Frostborn', address: 'Frostborn', from: 'Every Frostpeak task' });
+    return out; };
+  // ---- events from around the game
+  function areaEv(kind, a, b){
+    const sc = currentScene.id;
+    if(kind === 'make_fishing'){
+      if(sc === 'village') atDone('bw_fish');
+      if(a === 'catfish') atDone('bw_catfish');
+      if(a === 'golden_carp') atDone('bw_carp');
+      if(a === 'tench' && atFen(sc)) atDone('fen_carp');
+      if(a === 'frost_pike') atDone('fp_pike');
+    }
+    if(kind === 'make_woodcutting' && sc === 'misty_forest') atDone('bw_chop');
+    if(kind === 'make_smithing' && a === 'iron_sword') atDone('bw_sword');
+    if(kind === 'make_cooking' && atFen(sc)) atDone('fen_cook');
+    if(kind === 'make_alchemy' && atFen(sc)) atDone('fen_brew');
+    if(kind === 'make_foraging' && atFen(sc)){ atCount('fen_herbs'); if(a === 'bog_myrtle') atDone('fen_myrtle'); }
+    if(kind === 'make_thieving' && a === 'npc_pip') atDone('bw_pip');
+    if(kind === 'make_thieving' && a === 'npc_baron') markMet('at_baron_pocket');
+    if(kind === 'pet' && a === 'balthazar') atCount('bw_pet');
+    if(kind === 'buy' && a === 'npc_rosie' && b === 'honey_cake') atDone('bw_cake');
+    if(kind === 'bullseye') atDone('bw_bull');
+    if(kind === 'talk') atMark('bw_hello', a);
+    if(kind === 'rumour') atMark('bw_gossip', a);
+    if(kind === 'bj_win') atDone('bw_bj');
+    if(kind === 'kill_fenmire') atCount('fen_kills');
+    if(kind === 'husky') atDone('fp_dog');
+    if(kind === 'frozen') atMark('fp_frozen', a);
+    if(kind === 'dodge' && battle && a === 'dragonCloud'){ battle.cloudDodged = (battle.cloudDodged || 0) + 1; if(battle.cloudDodged >= 2) atDone('fen_cloud'); }
+    if(kind === 'saga' && b === 1) atDone(a === 'wolf' ? 'fp_wolf' : a === 'eagle' ? 'fp_eagle' : '');
+  }
+  function atBattleEnd(outcome, b){
+    if(outcome !== 'victory' || !b) return;
+    const pet = b.petMaxHp && !b.petKO, hit = b.hitBy || {};
+    if(b.enemyId === 'broodmother'){ if(!b.ate) atDone('bw_brood'); if(pet && activePet() === 'balthazar') atDone('bw_broodpig'); }
+    if(b.enemyId === 'mire_dragon'){ atDone('fen_dragon'); if(!hit.dragonDive) atDone('fen_nodive'); }
+    if(b.enemyId === 'frost_horror'){ atDone('fp_horror'); if(!b.ate && !b.petMaxHp) atDone('fp_alone'); }
+  }
+  const _atMast = mastAdd;
+  mastAdd = function(skill, thing, name){ const r = _atMast(skill, thing, name); try{ areaEv('make_' + skill, thing); }catch(e){} return r; };
+  const _atTaskCount = taskCount;
+  taskCount = function(kind){ _atTaskCount(kind); try{ areaEv(kind); }catch(e){} };
+  const _atPet = petThePet;
+  petThePet = function(){ const before = lastPetting, r = _atPet(); if(lastPetting !== before) areaEv('pet', activePet()); return r; };
+  const _atTown = townPages;
+  townPages = function(npc, speaker){ areaEv('talk', npc.spritePrefix); return _atTown(npc, speaker); };
+  const _atRumour = gretaRumour;
+  gretaRumour = function(npc, S){ const p = _atRumour(npc, S); areaEv('rumour', npc._rumour); return p; };
+  const _atEnd = endBattle;
+  endBattle = function(outcome){ const b = battle; _atEnd(outcome); try{ atBattleEnd(outcome, b); }catch(e){ console.error(e); } };
+  const _atItem = useBattleItem;
+  useBattleItem = function(id, onDone){ if(battle) battle.ate = true; return _atItem(id, onDone); };
+  const _atSaga = sagaDeed;
+  sagaDeed = function(deed, intro){ const q = quests.saga; if(q){ q['tries_' + deed] = (q['tries_' + deed] || 0) + 1; saveQuests(); } return _atSaga(deed, intro); };
+  // the saga's deeds are written into q.deeds when the minigame says so: a deed done on its first go counts
+  function atSagaCheck(){ const q = quests.saga; if(!q || !q.deeds) return;
+    for(const d of ['wolf', 'eagle']) if(q.deeds[d] && !atState.sets['saga_' + d]){ atState.sets['saga_' + d] = [1]; atSave(); areaEv('saga', d, q['tries_' + d] || 1); } }
+  // the Brightwood bonus (Hard): +10% XP for anything done in the area
+  const _atXp = gainSkillXp;
+  gainSkillXp = function(amounts){
+    if(atPaid('brightwood', 'Hard') && atBw(currentScene.id) && amounts) amounts = Object.fromEntries(Object.entries(amounts).map(([k, v]) => [k, v * 1.1]));
+    return _atXp(amounts); };
+  // Rosie's loyalty card (Brightwood Easy)
+  { const R = SHOPS.rosie, d0 = R.discount; R.discount = () => Math.max(d0 ? d0() : 0, atPaid('brightwood', 'Easy') ? 0.1 : 0); }
+  // the cold rewards: hand warmers (Frostpeak Easy) and Hallvard's hat take the edge off every rise
+  { const _n = n30Tick; n30Tick = function(){ const c0 = cold; _n();
+    const k = (atPaid('frostpeak', 'Easy') ? 0.85 : 1) * (wearing('hallvard_hat') ? 0.5 : 1);
+    if(cold > c0 && k < 1) cold = c0 + (cold - c0) * k; }; }
+  // ---- talk topics: Grizelda (compliment, the moonflower, the daily potion), the Baron, Bjorn
+  { const G = TOWN.npc_grizelda, prev = G.topics;
+    G.topics = (S, npc) => [ ...(prev ? prev(S, npc) : []),
+      { label: 'Compliment her moustache.', onChoose(){ atDone('fen_compliment');
+        spliceNext(S(pickOne(["...Did you just compliment my moustache? Nobody has done that since 1312. My third husband never did. Look where HE is now.",
+          "Oh! Well. Yes. It IS magnificent. I wax it with the tears of my enemies. And beeswax. Mostly beeswax."]))); } },
+      ...(has('moonflower') && !atState.done.fen_blush ? [{ label: 'Give her a moonflower.', onChoose(){ takeItem('moonflower'); atDone('fen_blush');
+        spliceNext(S("A moonflower. For me? ...Nobody gives a witch flowers. They give her pitchforks."), narrate("Grizelda goes red. All of her. Even the moustache, somehow."),
+          S("Go away before I do something kind. Shoo.")); } }] : []),
+      ...(atPaid('fenmire', 'Medium') ? [{ label: "Today's free potion?", onChoose(){ const d = new Date().toDateString();
+        if(atState.potionDay === d){ spliceNext(S("One a day. I'm a witch, not a fountain. Come back tomorrow.")); return; }
+        atState.potionDay = d; atSave(); spliceNext({ ...S(pickOne(["Here. Bubbling nicely. Don't drink it near the frog.", "Fresh from the cauldron. Ignore the eye. It's decorative."])), onShow(){ grantItem('hp_potion', 1); } }); } }] : []) ]; }
+  { const B = TOWN.npc_baron, prev = B.topics;
+    B.topics = (S, npc) => [ ...(prev ? prev(S, npc) : []),
+      ...(bwMet.has('at_baron_pocket') && !atState.done.bw_baron ? [{ label: 'You dropped this.', onChoose(){ atDone('bw_baron');
+        spliceNext(S("My lucky coin! I've been looking for that all... well, I didn't know it was gone. But I'd have looked."),
+          S("Thank you. ...Wait. Did I just say thank you? GUARDS! I feel strange! Fetch me a lie-down!")); } }] : []) ]; }
+  { const Bj = TOWN.npc_bjorn, prev = Bj.topics;
+    Bj.topics = (S, npc) => [ ...(prev ? prev(S, npc) : []),
+      ...(coldArea() && cold >= 2.9 && !atState.done.fp_bjorn ? [{ label: '(Your teeth are chattering too hard to talk.)', onChoose(){ atDone('fp_bjorn');
+        spliceNext(narrate('You try to say hello. It comes out as "h-h-h-h-h-hhhh".'), S('HA! HAHAHA! Look at you! Blue as a berry! HAHA!'), S("...Ahem. Go and sit by Hulda's fire. HA.")); } }] : []) ]; }
+  // ---- in-place hooks that need no event: the glacier finds are wired where they're looked at, the dogs where they're petted
+  // ---- the frog that knows your name: Gerald's cousin, on the edge of the Lily Pool
+  { const FC = 3.5, FR = 26.6, fx = FC * TILE, fy = FR * TILE;
+    SCENES.fenmire.decor.push({ row: FR + 0.4, worldX: fx - 22, worldY: fy - 26, w: 44, h: 32,
+      draw(sx, sy){ const blink = (clockNow % 5200) < 260, near = Math.hypot(player.x - fx, player.y - fy) < 70;
+        ctx.fillStyle = 'rgba(20,40,20,.35)'; ctx.beginPath(); ctx.ellipse(sx + 22, sy + 30, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+        drawSprite(near ? 'pet_toad_down_2' : blink ? 'pet_toad_down_1' : 'pet_toad_down_0', sx, sy + (near ? -6 : 0), 44, near ? 38 : 32); } });
+    HOTSPOTS.push({ scene: 'fenmire', x: fx, y: fy, r: 40, label: 'Look', avail: () => true, pages: () => {
+      const name = playerName || 'stranger', first = !atState.done.fen_frog; atDone('fen_frog');
+      return first ? [ narrate('A fat green frog sits on the edge of the pool. It looks up at you.'), say('Frog', '', `Ribbit. ...${name}. Ribbit.`),
+          narrate("It knows your name. You've never seen this frog in your life."), say('Frog', '', "Gerald talks about you. Gerald talks about EVERYTHING. Ribbit.") ]
+        : [ say('Frog', '', pickOne([`${name}! Ribbit. Say hello to Gerald. Don't tell him I said his name.`, 'Ribbit. The witch is in a good mood. That means run.', "Ribbit. I'm not a prince. I checked."])) ]; } }); }
+  // ---- the statue of you and the pig on Brightwood's square (Brightwood Elite)
+  { const SC = 27.5, SR = 38, sxW = SC * TILE, syW = SR * TILE;
+    SCENES.brightwood.decor.push({ row: SR + 0.2, worldX: sxW - 40, worldY: syW - 112, w: 80, h: 116,
+      draw(sx, sy){ if(!atPaid('brightwood', 'Elite')) return;
+        const x0 = sx, y0 = sy + 84;
+        ctx.fillStyle = '#5d5a55'; ctx.fillRect(x0 + 4, y0, 72, 30); ctx.fillStyle = '#8a857c'; ctx.fillRect(x0 + 6, y0 + 2, 68, 6);
+        ctx.fillStyle = '#76716a'; ctx.fillRect(x0 + 6, y0 + 8, 68, 20);
+        ctx.fillStyle = '#5d5a55'; for(let i = 0; i < 4; i++) ctx.fillRect(x0 + 6 + i * 17 + (i % 2) * 6, y0 + 8, 1, 20); ctx.fillRect(x0 + 6, y0 + 17, 68, 1);
+        ctx.fillStyle = '#9d978d'; ctx.fillRect(x0, y0 - 4, 80, 6); ctx.fillStyle = '#5d5a55'; ctx.fillRect(x0, y0 + 2, 80, 1);
+        ctx.fillStyle = '#c9a24a'; ctx.fillRect(x0 + 26, y0 + 12, 28, 10); ctx.fillStyle = '#7a5a20'; ctx.fillRect(x0 + 29, y0 + 15, 22, 1); ctx.fillRect(x0 + 29, y0 + 18, 16, 1);
+        ctx.save(); ctx.filter = 'grayscale(1) brightness(1.08) contrast(1.05)';
+        drawPlayerLayers('down', 'idle', sx + 30, sy + 82, PLAYER_SCALE, true);
+        drawSprite('pig_se_idle', sx + 40, sy + 50, 40, 40);
+        ctx.restore(); } });
+    HOTSPOTS.push({ scene: 'brightwood', x: sxW, y: syW + 6, r: 40, label: 'Look', avail: () => atPaid('brightwood', 'Elite'), pages: () => atPaid('brightwood', 'Elite') ? [
+      narrate(`A stone statue of you, with Balthazar at your feet. The plaque says: "${playerName || 'A Stranger'}, Pride of Brightwood. And the pig."`),
+      ...(petWith('balthazar') ? [{ speaker: 'Balthazar', portrait: 'pig', text: '"And the pig." AND THE PIG?! I did ALL the work. I want my own plinth.' }] : []) ] : null }); }
+  // ---- Snowball the yeti comes to visit your home (Frostpeak Elite)
+  { const YC = 6.5, YR = 4.2;
+    SCENES.house_interior.decor.push({ row: YR + 1, worldX: YC * TILE - 32, worldY: (YR + 1) * TILE - 64, w: 64, h: 64,
+      draw(sx, sy){ if(atPaid('frostpeak', 'Elite')) drawSprite('snowball_sit_' + (Math.floor(clockNow / 700) % 2), sx, sy, 64, 64); } });
+    HOTSPOTS.push({ scene: 'house_interior', x: YC * TILE, y: (YR + 0.6) * TILE, r: 40, label: 'Look', avail: () => atPaid('frostpeak', 'Elite'), pages: () => atPaid('frostpeak', 'Elite') ? [
+      narrate(pickOne(['Snowball the yeti sits by the stove, melting very slowly. Voula has given him a blanket and a bowl of porridge. He has eaten the bowl.',
+        'Snowball is visiting. He has rearranged the furniture so the cold side of the room faces him.', 'Snowball waves. A small snowdrift falls off his arm onto the rug. Voula sighs.'])) ] : null }); }
+  // ---- the poll: lists that open, state checks, the storm climb, the snowshoes
+  let atStatueSolid = false;
+  function atPoll(){
+    const sc = currentScene && currentScene.id; if(!sc) return;
+    for(const [a, A] of Object.entries(AREA_TASKS)){
+      if(!atState.seen[a] && A.opens(sc) && !window.__noAreaPop && (a !== 'brightwood' || q1.done) && !battleActive && !dialogueActive && !popupOpen && !cutsceneLocked && !station && !fishing && !menuIsOpen()){   // after quest 1, never in the middle of something
+        atState.seen[a] = Date.now(); atSave();
+        const done = AT_TIERS.flatMap(t => A.tiers[t]).filter(t => atState.done[t.id]).length;
+        queuePopup({ kind: 'got', label: 'New', title: `The ${A.name.replace(/^The /, '')} Tasks`, rows: [`A list of things to do in ${A.name.replace(/^The /, 'the ')}, from easy to elite. Menu > Quests > Tasks.`,
+          done ? `You've already done ${done} of them without knowing!` : 'Finish a whole tier for a reward.'] });
+        for(const tier of AT_TIERS) if(atTierDone(a, tier)) setTimeout(() => atPayout(a, tier), 1200);
+      }
+      for(const tier of AT_TIERS) for(const t of A.tiers[tier]) if(t.check && !atState.done[t.id]){ try{ if(t.check()) atDone(t.id); }catch(e){} }
+    }
+    if(sc === 'frostpeak' && nearFire()) atDone('fp_fire');
+    if(sc === 'frostpeak' && STORM.phase === 'storm' && player.y < 14 * TILE) atDone('fp_storm');
+    atSagaCheck();
+    if(atPaid('brightwood', 'Elite') && !atStatueSolid){ const G = SCENES.brightwood; for(const c of [26, 27, 28]) (G.solid || (G.solid = new Set())).add(c + ',37'); G.fine = null; atStatueSolid = true; }
+    player.speed = atPaid('frostpeak', 'Medium') && atFp(sc) ? 120 : 105;
+  }
+  setInterval(() => { try{ atPoll(); }catch(e){ console.error(e); } }, 1000);
+  // ---- Menu > Quests: a "Quests | Tasks" switch on top; Tasks shows each list you've opened
+  let questSub = 'quests', atOpen = null;
+  const _atRenderQuests = renderQuests;
+  renderQuests = function(){
+    const list = document.getElementById('questList');
+    if(questSub === 'tasks') renderAreaTasks(); else _atRenderQuests();
+    const seg = document.createElement('div'); seg.className = 'segRow atSeg';
+    for(const [id, label] of [['quests', 'Quests'], ['tasks', 'Tasks']]){
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'uiBtn' + (questSub === id ? '' : ' grey'); b.textContent = label;
+      b.addEventListener('click', () => { questSub = id; renderQuests(); }); seg.appendChild(b); }
+    list.prepend(seg);
+  };
+  function atIcon(name, size){ const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+    const r = MANIFEST[name]; if(r){ const k = Math.min(size / r[2], size / r[3]); drawSpriteOn(g, name, (size - r[2] * k) / 2, (size - r[3] * k) / 2, r[2] * k, r[3] * k); } return c; }
+  function renderAreaTasks(){
+    const list = document.getElementById('questList'); list.innerHTML = '';
+    const open = Object.keys(AREA_TASKS).filter(a => atState.seen[a]);
+    if(!open.length){ list.innerHTML = '<div class="statHint">No task lists yet. Every area has its own list - the first one waits for you in Brightwood.</div>'; return; }
+    if(!atOpen || !open.includes(atOpen)) atOpen = open[open.length - 1];
+    const box = document.createElement('div'); box.className = 'questBox atBox';
+    for(const a of open){ const A = AREA_TASKS[a];
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'atArea' + (a === atOpen ? ' on' : '');
+      row.appendChild(atIcon(A.icon, 34));
+      const t = document.createElement('div'); t.className = 'atNames'; t.innerHTML = `<div class="atName"></div><div class="atSub"></div>`;
+      t.firstChild.textContent = A.name; t.lastChild.textContent = A.sub; row.appendChild(t);
+      row.addEventListener('click', () => { atOpen = a; renderQuests(); }); box.appendChild(row);
+      const tiers = document.createElement('div'); tiers.className = 'atTiers';
+      for(const tier of AT_TIERS){ const L = A.tiers[tier], d = L.filter(x => atState.done[x.id]).length;
+        const el = document.createElement('div'); el.className = 'atTier' + (d === L.length ? ' done' : ''); el.textContent = `${tier} ${d}/${L.length}`;
+        const bar = document.createElement('div'); bar.className = 'atBar'; const fill = document.createElement('i'); fill.style.width = (100 * d / L.length) + '%'; bar.appendChild(fill); el.appendChild(bar); tiers.appendChild(el); }
+      box.appendChild(tiers);
+      if(a !== atOpen) continue;
+      for(const tier of AT_TIERS){ const L = document.createElement('div'); L.className = 'atList';
+        const h = document.createElement('div'); h.className = 'atTierHead'; h.textContent = tier; L.appendChild(h);
+        for(const x of A.tiers[tier]){ const ok = !!atState.done[x.id];
+          const r = document.createElement('div'); r.className = 'atT' + (ok ? ' ok' : '') + (x.vague ? ' vague' : '');
+          const bx = document.createElement('span'); bx.className = 'bx'; const tx = document.createElement('span');
+          tx.textContent = x.text + (!ok && x.count ? ` (${Math.min(x.count, atState.n[x.id] || 0)}/${x.count})` : !ok && x.set && x.set.length > 2 ? ` (${(atState.sets[x.id] || []).length}/${x.set.length})` : '');
+          r.append(bx, tx);
+          if(x.vague && !ok){ const n = atState.hints[x.id] || 0;
+            const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'uiBtn grey trackBtn atHintBtn'; hb.textContent = n >= x.hints.length ? 'No more hints' : 'Ask Balthazar';
+            hb.addEventListener('click', () => { if(n < x.hints.length){ atState.hints[x.id] = n + 1; atSave(); renderQuests(); } });
+            const wrap = document.createElement('div'); wrap.className = 'atHints';
+            for(let i = 0; i < n; i++){ const p = document.createElement('div'); p.className = 'atHint'; p.textContent = 'Balthazar: "' + x.hints[i] + '"'; wrap.appendChild(p); }
+            wrap.appendChild(hb); r.appendChild(wrap); }
+          L.appendChild(r); }
+        const rw = document.createElement('div'); rw.className = 'atReward' + (atPaid(a, tier) ? ' got' : ''); rw.textContent = (atPaid(a, tier) ? 'Reward (yours): ' : 'Reward: ') + A.rewards[tier].text;
+        L.appendChild(rw); box.appendChild(L); }
+    }
+    list.appendChild(box);
+  }
+  { const st = document.createElement('style'); st.textContent = `
+  .atSeg{ margin:0 0 10px; }
+  .atBox .atArea{ display:flex; gap:10px; align-items:center; width:100%; padding:6px 8px; background:rgba(0,0,0,.22); border:2px solid transparent; border-radius:3px; margin:0 0 4px; font:inherit; color:inherit; text-align:left; cursor:pointer; }
+  .atBox .atArea.on{ border-color:rgba(217,164,65,.55); background:rgba(0,0,0,.32); }
+  .atBox .atArea canvas{ width:34px; height:34px; image-rendering:pixelated; flex:0 0 auto; }
+  .atBox .atName{ font-size:20px; color:#f3e3c0; } .atBox .atSub{ font-size:14px; color:#c8b896; line-height:1.1; }
+  .atTiers{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin:2px 0 10px; }
+  .atTier{ text-align:center; font-size:15px; color:#f3e3c0; } .atTier.done{ color:#f3d27a; }
+  .atBar{ height:8px; background:#2a2030; border:1px solid #6a5a3a; margin-top:2px; } .atBar i{ display:block; height:100%; background:linear-gradient(#f3d98a, #c9a24a); }
+  .atList{ margin:0 0 10px; } .atTierHead{ font-size:19px; color:var(--gold); margin:4px 0 2px; }
+  .atList .atT{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:flex-start; font-size:17px; line-height:1.15; padding:3px 6px; color:#efe2c2; }
+  .atList .atT > span:nth-child(2){ flex:1 1 0; min-width:0; }
+  .atList .atT .bx{ flex:0 0 16px; height:16px; border:2px solid #c9a24a; margin-top:1px; background:#2a2030 center/12px no-repeat; image-rendering:pixelated; box-sizing:border-box; }
+  .atList .atT.ok{ color:#a99a7a; text-decoration:line-through; text-decoration-color:rgba(201,162,74,.6); } .atList .atT.ok .bx{ background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAICAYAAADA+m62AAAAN0lEQVR4nGNkIADk3OT+MzAwMDARUlQ4q5CwSf0P+v/DTIQbjVcRNkGsirApxqkIr3X4FOOSAwA6+S/8B/6R3gAAAABJRU5ErkJggg==); }
+  .atList .atT.vague > span:nth-child(2)::after{ content:' ?'; color:#e8c66a; }
+  .atHints{ flex:1 0 100%; padding-left:24px; display:flex; flex-direction:column; gap:3px; align-items:flex-start; }
+  .atHint{ font-size:15px; color:#ffd9a8; line-height:1.15; } .atHintBtn{ font-size:15px; }
+  .atReward{ margin:4px 6px 2px; font-size:15px; color:#9fd0ff; } .atReward.got{ color:#f3d27a; }`; document.head.appendChild(st); }
 
   requestAnimationFrame(frame);
 
