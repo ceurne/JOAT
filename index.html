@@ -184,7 +184,7 @@
   }
   .hud{
     position:absolute;
-    top: calc(10px + env(safe-area-inset-top,0px));
+    top: 10px;
     left: 12px;
     right: 12px;
     display:flex;
@@ -218,7 +218,7 @@
   .bkReward.got{ border-style:solid; border-color:#6fae5a; color:#cfeec0; }
   .bkReward canvas{ width:26px; height:26px; image-rendering:pixelated; flex:0 0 auto; }
   /* skilling round 1 (user pick B): the skill you're training, top left under the goal line */
-  #xpTrack{ position:absolute; left:12px; top: calc(10px + env(safe-area-inset-top,0px)); z-index:6; pointer-events:none;
+  #xpTrack{ position:absolute; left:12px; top: 10px; z-index:6; pointer-events:none;
     display:flex; align-items:center; gap:8px; min-width:170px; max-width:62%; padding:4px 10px 6px 6px;
     background: linear-gradient(180deg, #3a4155, var(--slate)); border:2px solid var(--gold); box-shadow:0 0 0 2px var(--outline);
     border-radius:4px; font-family: var(--ui-font); color: var(--cream); transition: opacity .4s ease; }
@@ -236,7 +236,7 @@
     background: var(--slate); border:2px solid var(--gold); box-shadow: 0 0 0 2px var(--outline); color: var(--gold);
     font-family: var(--ui-font); font-size:19px; line-height:20px; padding:0; opacity:.8; }
   /* round 8b: zoom buttons under the report button */
-  #zoomBtns{ position:absolute; right:8px; top: calc(44px + env(safe-area-inset-top,0px)); display:flex; flex-direction:column; gap:6px; z-index:5; }
+  #zoomBtns{ position:absolute; right:8px; top: 44px; display:flex; flex-direction:column; gap:6px; z-index:5; }
   #zoomBtns[hidden]{ display:none; }
   #zoomBtns button{ width:26px; height:26px; border-radius:50%; cursor:pointer; background: var(--slate); border:2px solid var(--gold);
     box-shadow: 0 0 0 2px var(--outline); color: var(--gold); font-family: var(--ui-font); font-size:20px; line-height:18px; padding:0; opacity:.8; touch-action:manipulation; }
@@ -247,11 +247,11 @@
   #genderPasteText{ width:100%; min-height:70px; box-sizing:border-box; }
   .loadMsg{ background:#3a1f1a; color:#ffd9c9; border:2px solid #c9674a; border-radius:3px; padding:4px 10px; font-size:15px; }
   .loadMsg.ok{ background:#1f3320; color:#d8f5c8; border-color:#6ab04c; }
-  #saveNag{ position:absolute; left:50%; transform:translateX(-50%); top: calc(52px + env(safe-area-inset-top,0px)); z-index:25; width:min(92%, 360px);
+  #saveNag{ position:absolute; left:50%; transform:translateX(-50%); top: 52px; z-index:25; width:min(92%, 360px);
     padding:10px 14px 12px; display:flex; flex-direction:column; gap:8px; text-align:center; font-size:17px; }
   #saveNag[hidden]{ display:none; }
   #saveNag .row{ display:flex; gap:8px; justify-content:center; }
-  #bugPanel{ position:absolute; left:8px; right:8px; top: calc(52px + env(safe-area-inset-top,0px)); padding: 12px 18px 14px; z-index: 30; }
+  #bugPanel{ position:absolute; left:8px; right:8px; top: 52px; padding: 12px 18px 14px; z-index: 30; }
   #bugPanel[hidden]{ display:none; }
   #bugPanel .bugHint, #bugPanel .bugSaved{ font-size:16px; opacity:.85; margin:4px 0 8px; }
   #bugPanel textarea{ width:100%; box-sizing:border-box; font-family: var(--ui-font); font-size:17px; background:#1a1d26; color: var(--cream);
@@ -283,7 +283,7 @@
     background: linear-gradient(180deg, var(--slate) 0%, var(--slate-deep) 100%);
     border-top: 3px solid var(--gold);
     box-shadow: 0 -2px 0 var(--outline);
-    padding: 14px calc(18px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(18px + env(safe-area-inset-left,0px));
+    padding: 14px 18px 14px 18px;
   }
   .firefly{
     position:absolute;
@@ -469,7 +469,7 @@
     position:absolute;
     left:50%;
     /* below the top-left badge (the goal line, up to two lines) rather than level with it */
-    top: calc(62px + env(safe-area-inset-top,0px));
+    top: 62px;
     transform: translateX(-50%) translateY(-10px);
     background: var(--slate);
     border: 2px solid var(--gold);
@@ -901,7 +901,7 @@
   }
   #creditsBtn{
     position: absolute;
-    right: calc(10px + env(safe-area-inset-right,0px));
+    right: 10px;
     top: 8px;
     width: 22px; height: 22px;
     background: var(--ico-info) center / 22px 22px no-repeat;
@@ -934,7 +934,7 @@
     display:flex; flex-direction:column; justify-content:center; gap:8px;
     position:absolute; left:0; right:0; bottom:0;
     min-height: calc(100% + 3px); /* + the bar's own 3px gold top border, which it covers */
-    padding: 12px calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));
+    padding: 12px 14px 14px 14px;
     background: linear-gradient(180deg, var(--slate) 0%, var(--slate-deep) 100%);
     border-top: 3px solid var(--gold);
     box-shadow: 0 -2px 0 var(--outline);
@@ -944,7 +944,7 @@
   /* Shop (option A of the shop mockups): the inventory's slate panel with
      Buy/Sell tabs, a purse line and one row per item; the dock carries the
      big Buy/Sell button and Leave. See openShop(). */
-  #shopPanel{ position:absolute; left:8px; right:8px; top: calc(52px + env(safe-area-inset-top,0px));
+  #shopPanel{ position:absolute; left:8px; right:8px; top: 52px;
     max-height: calc(100% - 64px); padding: 12px 18px 14px; z-index: 9; overflow:hidden; }
   #shopPanel:not([hidden]){ display:flex; flex-direction:column; }
   #shopTabs{ flex:0 0 auto; display:flex; gap:8px; margin-bottom:8px; }
@@ -981,7 +981,7 @@
   #shopDock[hidden]{ display:none; }
   /* blackjack (White Jack / Black Jack): the slate plate with both hands; chips,
      Hit / Stand / Double and Leave in the dock. See openBlackjack(). */
-  #bjPanel{ position:absolute; left:8px; right:8px; top: calc(52px + env(safe-area-inset-top,0px)); padding: 10px 16px 12px; z-index: 9; }
+  #bjPanel{ position:absolute; left:8px; right:8px; top: 52px; padding: 10px 16px 12px; z-index: 9; }
   #bjPanel[hidden]{ display:none; }
   #bjPanel .panelHeader{ margin-bottom:4px; }
   #bjPanel .bjDealerTot, #bjPanel .bjPlayerTot{ font-size:19px; color:var(--gold); margin-top:4px; }
@@ -1018,8 +1018,9 @@
      text - nothing in the game is selectable except the text fields */
   #wrap{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
   #wrap input, #wrap textarea{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+  textarea, input[type=text], .saveCode{ font-size:16px !important; }
   #menuDock button, #controlBar button{ touch-action: manipulation; }
-  #skillPanel{ position:absolute; left:8px; right:8px; top: calc(52px + env(safe-area-inset-top,0px)); padding: 8px 18px 12px; z-index: 9; pointer-events:none; }
+  #skillPanel{ position:absolute; left:8px; right:8px; top: 52px; padding: 8px 18px 12px; z-index: 9; pointer-events:none; }
   #skillPanel.low{ top:auto; bottom:12px; }
   #skillPanel .t{ display:flex; justify-content:space-between; align-items:baseline; font-size:22px; color:var(--gold); }
   #skillPanel .t span{ font-size:16px; opacity:.7; color:var(--cream); }
@@ -1381,7 +1382,7 @@
     <div id="genderPick" hidden>
       <div class="genderLoad"><button id="genderLoad" class="uiBtn grey" type="button">I have a save file</button><input id="genderLoadFile" type="file" accept=".txt,text/plain" hidden>
         <button id="genderPaste" class="linkBtn" type="button">or paste a save code</button>
-        <div id="genderPasteBox" hidden><textarea id="genderPasteText" class="saveCode" placeholder="Paste your save code here"></textarea><button id="genderPasteGo" class="uiBtn" type="button">Load this game</button></div>
+        <div id="genderPasteBox" hidden><textarea id="genderPasteText" class="saveCode" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Paste your save code here"></textarea><button id="genderPasteGo" class="uiBtn" type="button">Load this game</button></div>
         <div id="genderLoadMsg" class="loadMsg" hidden></div></div>
       <div class="ccPanel">
         <div class="ccRibbon" id="ccRibbon">Create your character</div>
@@ -1416,7 +1417,16 @@
     window.setInterval = (fn, ms, ...a) => { const id = N.si(() => { if(!BOOT.dead) fn(...a); }, ms); BOOT.intervals.push(id); return id; };
     window.requestAnimationFrame = cb => N.raf(t => { if(!BOOT.dead) cb(t); });
   }
-  function restartInPage(){
+  // v149.2: iOS zooms into a text box and never zooms back out - briefly cap the zoom to reset it
+  function unzoomPage(){
+    const m = document.querySelector('meta[name=viewport]'); if(!m) return;
+    const c = m.getAttribute('content') || '';
+    if(/maximum-scale/.test(c)) return;
+    m.setAttribute('content', c + ',maximum-scale=1');
+    setTimeout(() => m.setAttribute('content', c), 400);
+  }
+  document.addEventListener('focusout', e => { if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) setTimeout(unzoomPage, 50); });
+  function restartInPage(){ unzoomPage();
     BOOT.dead = true;
     for(const [t, ty, fn, o] of BOOT.listeners) try{ EventTarget.prototype.removeEventListener.call(t, ty, fn, o); }catch(e){}
     for(const id of BOOT.intervals) try{ clearInterval(id); }catch(e){}
@@ -5338,6 +5348,7 @@
   // v133 (user: skill of the day): one skill a day gives half as much XP again;
   // Barnaby shouts which one. Same skill for everyone on the same date.
   function skillOfDay(){
+    if(window.__sotd) return window.__sotd;   // tests only: the x1.5 skill stays put, whatever the date
     if(window.__sotd) return window.__sotd;   // tests only: the x1.5 skill stays put, whatever the date
     const d = new Date(), keys = Object.keys(SKILLS).filter(k => !SKILLS[k].soon && k !== 'hitpoints');
     return keys[((d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate()) * 7919) % keys.length];
@@ -16653,7 +16664,7 @@
   let compassArrow = true; try{ compassArrow = localStorage.getItem(COMPASS_KEY) !== '0'; }catch(e){}
   const compassCv = document.createElement('canvas'); compassCv.id = 'henkCompass'; compassCv.width = 52; compassCv.height = 56; compassCv.hidden = true;
   compassCv.title = "Henk's Compass (tap: arrow on/off)";
-  compassCv.style.cssText = 'position:absolute;right:6px;top:calc(104px + env(safe-area-inset-top,0px));width:44px;height:47px;image-rendering:pixelated;z-index:5;cursor:pointer;touch-action:manipulation';
+  compassCv.style.cssText = 'position:absolute;right:6px;top:104px;width:44px;height:47px;image-rendering:pixelated;z-index:5;cursor:pointer;touch-action:manipulation';
   document.getElementById('gameArea').appendChild(compassCv);
   compassCv.addEventListener('pointerdown', e => { e.preventDefault(); compassArrow = !compassArrow; try{ localStorage.setItem(COMPASS_KEY, compassArrow ? '1' : '0'); }catch(_){}
     showToast(compassArrow ? 'The arrow at your feet is back.' : 'Arrow hidden. The needle still points.'); });
@@ -19553,36 +19564,103 @@
   // OW2 = the JSON deflated (CompressionStream) - about a third of the length of the old OW1 code; OW1 still loads.
   function saveData(){ savePosition(); const d = {}; try{ for(const k of Object.keys(localStorage)) if(/^open_w/.test(k) || k === BUG_KEY) d[k] = localStorage.getItem(k); }catch(e){} return d; }
   const b64 = bytes => { let bin = ''; for(let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+  // v149.2: our own raw-deflate unpacker (no browser API, no network) - an iPhone refused a valid OW2 code
+  function owInflateRaw(src){
+    let pos = 0, bit = 0, out = new Uint8Array(Math.max(1024, src.length * 4)), n = 0;
+    const need = k => { if(n + k > out.length){ let m = out.length * 2; while(m < n + k) m *= 2; const o = new Uint8Array(m); o.set(out.subarray(0, n)); out = o; } };
+    const bits = k => { let v = 0; for(let i = 0; i < k; i++){ if(pos >= src.length) throw new Error('code ends too soon'); v |= ((src[pos] >> bit) & 1) << i; if(++bit === 8){ bit = 0; pos++; } } return v; };
+    const table = lens => {
+      const count = new Uint16Array(16), offs = new Uint16Array(16), sym = new Uint16Array(lens.length);
+      for(const l of lens) count[l]++;
+      count[0] = 0; for(let i = 1; i < 16; i++) offs[i] = offs[i - 1] + count[i - 1];
+      lens.forEach((l, s) => { if(l) sym[offs[l]++] = s; });
+      return { count, sym };
+    };
+    const decode = t => {
+      let code = 0, first = 0, idx = 0;
+      for(let l = 1; l < 16; l++){ code |= bits(1); const c = t.count[l]; if(code - c < first) return t.sym[idx + code - first]; idx += c; first += c; first <<= 1; code <<= 1; }
+      throw new Error('bad code');
+    };
+    const LB = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+    const LE = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+    const DB = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+    const DE = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+    let fixL = null, fixD = null, last = 0;
+    while(!last){
+      last = bits(1); const type = bits(2);
+      if(type === 0){
+        if(bit){ bit = 0; pos++; }
+        const len = src[pos] | src[pos + 1] << 8; pos += 4;
+        if(pos + len > src.length) throw new Error('code ends too soon');
+        need(len); out.set(src.subarray(pos, pos + len), n); n += len; pos += len; continue;
+      }
+      let lt, dt;
+      if(type === 1){
+        if(!fixL){ const l = []; for(let i = 0; i < 288; i++) l.push(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8); fixL = table(l); fixD = table(new Array(30).fill(5)); }
+        lt = fixL; dt = fixD;
+      } else if(type === 2){
+        const hl = bits(5) + 257, hd = bits(5) + 1, hc = bits(4) + 4, ORD = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+        const cl = new Array(19).fill(0); for(let i = 0; i < hc; i++) cl[ORD[i]] = bits(3);
+        const ct = table(cl), ls = [];
+        while(ls.length < hl + hd){
+          const s = decode(ct);
+          if(s < 16) ls.push(s);
+          else if(s === 16){ if(!ls.length) throw new Error('bad lengths'); const p = ls[ls.length - 1]; for(let r = 3 + bits(2); r; r--) ls.push(p); }
+          else if(s === 17){ for(let r = 3 + bits(3); r; r--) ls.push(0); }
+          else { for(let r = 11 + bits(7); r; r--) ls.push(0); }
+        }
+        lt = table(ls.slice(0, hl)); dt = table(ls.slice(hl, hl + hd));
+      } else throw new Error('bad block');
+      for(;;){
+        const s = decode(lt);
+        if(s < 256){ need(1); out[n++] = s; }
+        else if(s === 256) break;
+        else {
+          const li = s - 257; if(li > 28) throw new Error('bad length');
+          const len = LB[li] + bits(LE[li]), di = decode(dt); if(di > 29) throw new Error('bad distance');
+          const d = DB[di] + bits(DE[di]); if(d > n) throw new Error('bad distance');
+          need(len); for(let k = 0; k < len; k++){ out[n] = out[n - d]; n++; }
+        }
+      }
+    }
+    return new TextDecoder().decode(out.subarray(0, n));
+  }
+  let saveCodeWhy = '';
   async function makeSaveCode(){
     const json = JSON.stringify(saveData());
     if(typeof CompressionStream !== 'undefined') try{
       const z = new Blob([json]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-      return 'OW2:' + b64(new Uint8Array(await new Response(z).arrayBuffer()));
+      const packed = new Uint8Array(await new Response(z).arrayBuffer());
+      let same = false; try{ same = owInflateRaw(packed) === json; }catch(e){}
+      if(same) return 'OW2:' + b64(packed);
     }catch(e){}
     return 'OW1:' + btoa(unescape(encodeURIComponent(json)));
   }
   // forgiving: the code may sit anywhere in the text (a file has a title line first), and copying can add
   // invisible characters - only base64 characters after the marker count
   async function readSaveCode(txt){
-    txt = String(txt || '');
+    txt = String(txt || '').replace(/ow([12])\s*:/i, (m, n) => 'OW' + n + ':'); saveCodeWhy = '';
     try{
       let i = txt.indexOf('OW2:');
       if(i >= 0){
         const bytes = Uint8Array.from(atob(txt.slice(i + 4).replace(/[^A-Za-z0-9+/=]/g, '')), c => c.charCodeAt(0));
-        let json = null;
-        if(typeof DecompressionStream !== 'undefined') try{
-          json = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
-        }catch(e){}
-        if(json == null){   // round fb2: a phone without DecompressionStream - fetch a small unpacker
+        const tries = [];
+        tries.push(async () => owInflateRaw(bytes));
+        if(typeof DecompressionStream !== 'undefined') tries.push(async () => await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text());
+        tries.push(async () => {
           if(!window.pako) await new Promise(res => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js'; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
-          if(window.pako) json = window.pako.inflateRaw(bytes, { to: 'string' });
+          return window.pako ? window.pako.inflateRaw(bytes, { to: 'string' }) : null;
+        });
+        for(const t of tries){
+          try{ const json = await t(); if(json == null) continue; const d = JSON.parse(json); if(d && typeof d === 'object') return d; }
+          catch(e){ if(!saveCodeWhy) saveCodeWhy = (e && e.message) || 'unreadable'; }
         }
-        if(json == null) return null;
-        const d = JSON.parse(json); return d && typeof d === 'object' ? d : null;
+        return null;
       }
       i = txt.indexOf('OW1:');
-      if(i >= 0){ const d = JSON.parse(decodeURIComponent(escape(atob(txt.slice(i + 4).replace(/[^A-Za-z0-9+/=]/g, ''))))); return d && typeof d === 'object' ? d : null; }
-    }catch(e){}
+      if(i >= 0) try{ const d = JSON.parse(decodeURIComponent(escape(atob(txt.slice(i + 4).replace(/[^A-Za-z0-9+/=]/g, ''))))); return d && typeof d === 'object' ? d : null; }catch(e){ saveCodeWhy = (e && e.message) || 'unreadable'; }
+      if(!saveCodeWhy) saveCodeWhy = 'no OW1: or OW2: at the start';
+    }catch(e){ saveCodeWhy = (e && e.message) || 'unreadable'; }
     return null;
   }
   function applySave(data){
@@ -19637,7 +19715,7 @@
     }
     // saving files doesn't work in this view: hand over the code instead
     showToast("Can't save a file here - copy the save code instead");
-    const box = document.createElement('textarea'); box.className = 'saveCode'; box.readOnly = true; box.value = code;
+    const box = document.createElement('textarea'); box.className = 'saveCode'; ['autocapitalize', 'autocorrect', 'autocomplete'].forEach(a => box.setAttribute(a, 'off')); box.spellcheck = false; box.readOnly = true; box.value = code;
     if(!button){ showToast('Your save code is in Menu > Settings'); return; }
     button.closest('.setRow').appendChild(box); box.select();
   }
@@ -19720,7 +19798,7 @@
     const copyB = btn('Copy save code');
     copyB.addEventListener('click', async () => {
       const code = await makeSaveCode();
-      const box = document.createElement('textarea'); box.className = 'saveCode'; box.readOnly = true; box.value = code;
+      const box = document.createElement('textarea'); box.className = 'saveCode'; ['autocapitalize', 'autocorrect', 'autocomplete'].forEach(a => box.setAttribute(a, 'off')); box.spellcheck = false; box.readOnly = true; box.value = code;
       bk.appendChild(box); box.select();
       const done = () => { showToast('Save code copied'); copyB.disabled = true; if(typeof markSaved === 'function') markSaved(); };
       if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => showToast('Select the code and copy it'));
@@ -19731,12 +19809,12 @@
     const loadB = btn('Load a save code', 'grey');
     loadB.addEventListener('click', () => {
       loadB.disabled = true;
-      const box = document.createElement('textarea'); box.className = 'saveCode'; box.placeholder = 'Paste your save code here';
+      const box = document.createElement('textarea'); box.className = 'saveCode'; ['autocapitalize', 'autocorrect', 'autocomplete'].forEach(a => box.setAttribute(a, 'off')); box.spellcheck = false; box.placeholder = 'Paste your save code here';
       const go = btn('Load this game');
       go.addEventListener('click', async () => {
         const txt = box.value.trim();
         const data = /^restore-?2509$/i.test(txt.replace(/\s+/g, '')) ? RESTORE_2509 : await readSaveCode(txt);
-        if(!data){ showToast(`That isn't a save code (${txt.length} characters)`); return; }
+        if(!data){ showToast(`That isn't a save code (${txt.length} characters: ${saveCodeWhy})`); return; }
         applySave(data);
       });
       bk.append(box, go);
@@ -19831,7 +19909,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v149.1';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v149.2';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -20269,7 +20347,7 @@
       const bx = document.getElementById('genderPasteBox'); bx.hidden = !bx.hidden; if(!bx.hidden) document.getElementById('genderPasteText').focus(); });
     document.getElementById('genderPasteGo').addEventListener('click', async e => { e.preventDefault(); e.stopPropagation();
       const txt = document.getElementById('genderPasteText').value.trim();
-      const data = await readSaveCode(txt); if(!data){ loadMsg(`That isn't a save code (${txt.length} characters)`); return; }
+      const data = await readSaveCode(txt); if(!data){ loadMsg(`That isn't a save code (${txt.length} characters: ${saveCodeWhy})`); return; }
       applySave(data); });
     // v138.1: a save that doesn't say who you play lands on the character picker - say so, or it looks like it failed
     if(loadedFromFile){ let g = null; try{ g = localStorage.getItem(GENDER_KEY); }catch(e){}
@@ -21265,7 +21343,7 @@
   const TRACK_MASKS = { wolf: ['...#.', '.#..#', '##...', '.#..#', '...#.'], goat: ['##', '..', '##'], pig: ['##.', '...', '##.'],
     boots: ['##.####.', '##.#####', '##.#####', '##.####.'] };
   const TRACK_GAIT = { boots: { step: 11, side: 3 }, pig: { step: 7, side: 2 }, goat: { step: 9, side: 3 }, wolf: { step: 13, side: 3 } };
-  const TRACK_LIFE = 40000;
+  const TRACK_LIFE = 15000;
   let tracks = [], trackScene = null;
   const trackWalkers = {};
   function snowAt(x, y){
@@ -23921,28 +23999,45 @@
 
   // ---- the round compass minimap in the top-right corner (pick M1: north up, a gold rim with an N), the zoom and
   // report buttons in a row under it; tap it for the big map. The goal line at the top is gone: the X does that job.
-  const MINI = 104, MINI_R = 10;
+  const MINI = 104, MINI_ZOOMS = [6, 10, 18];
+  // user 6 Oct (option B): two small buttons on the minimap's rim zoom it in and out; remembered in the save
+  let miniZi = 1; try{ const z = localStorage.getItem('open_world_mini_zoom'); if(z !== null && +z >= 0 && +z < MINI_ZOOMS.length) miniZi = +z; }catch(e){}
   const miniWrap = document.createElement('div'); miniWrap.id = 'miniMap';
   const miniCv = document.createElement('canvas'); miniCv.id = 'miniCv'; miniCv.title = "Grandpa's Map"; miniWrap.appendChild(miniCv);
   const miniBtns = document.createElement('div'); miniBtns.id = 'miniBtns'; miniWrap.appendChild(miniBtns);
   document.getElementById('gameArea').appendChild(miniWrap);
+  const miniZoomRow = document.createElement('div'); miniZoomRow.id = 'miniZoomRow'; miniWrap.appendChild(miniZoomRow);
+  const miniZoomBtn = (id, html, d, label) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.innerHTML = html; b.title = label; b.setAttribute('aria-label', label);
+    b.addEventListener('click', e => { e.stopPropagation(); setMiniZoom(miniZi + d); }); miniZoomRow.appendChild(b); return b; };
+  const miniOutB = miniZoomBtn('miniOut', '&minus;', 1, 'Minimap: show more'), miniInB = miniZoomBtn('miniIn', '+', -1, 'Minimap: show closer');
+  function setMiniZoom(z){
+    miniZi = Math.max(0, Math.min(MINI_ZOOMS.length - 1, z));
+    try{ localStorage.setItem('open_world_mini_zoom', String(miniZi)); }catch(e){}
+    miniInB.disabled = miniZi === 0; miniOutB.disabled = miniZi === MINI_ZOOMS.length - 1; miniAt = 0;
+  }
   for(const id of ['zoomOut', 'zoomIn', 'bugBtn']){ const b = document.getElementById(id); if(b) miniBtns.appendChild(b); }
   const zb = document.getElementById('zoomBtns'); if(zb) zb.hidden = true;
   const miniStyle = document.createElement('style');
   miniStyle.textContent = `
-  #miniMap{ position:absolute; right:6px; top:calc(6px + env(safe-area-inset-top,0px)); z-index:5; display:flex; flex-direction:column; align-items:center; gap:5px; pointer-events:none; }
+  #miniMap{ position:absolute; right:6px; top:6px; z-index:5; display:flex; flex-direction:column; align-items:center; gap:5px; pointer-events:none; }
   #miniCv{ width:${MINI + 12}px; height:${MINI + 12}px; image-rendering:pixelated; pointer-events:auto; cursor:pointer; touch-action:manipulation; filter:drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
   #miniCv[hidden]{ display:none; }
   #miniBtns{ display:flex; gap:6px; pointer-events:auto; }
   #miniBtns button{ width:26px; height:26px; border-radius:50%; cursor:pointer; background: var(--slate); border:2px solid var(--gold);
     box-shadow: 0 0 0 2px var(--outline); color: var(--gold); font-family: var(--ui-font); font-size:20px; line-height:18px; padding:0; opacity:.85; touch-action:manipulation; margin:0; }
   #miniBtns #bugBtn{ font-size:19px; line-height:20px; } #miniBtns button:disabled{ opacity:.35; cursor:default; }
-  #miniMap.away{ visibility:hidden; }`;
+  #miniMap.away{ visibility:hidden; }
+  #miniZoomRow{ position:absolute; left:-3px; right:-3px; top:${MINI - 12}px; display:flex; justify-content:space-between; pointer-events:none; }
+  #miniCv[hidden] ~ #miniZoomRow{ display:none; }
+  #miniZoomRow button{ pointer-events:auto; width:22px; height:22px; border-radius:50%; cursor:pointer; background: var(--slate); border:2px solid var(--gold);
+    box-shadow: 0 0 0 2px var(--outline); color: var(--gold); font-family: var(--ui-font); font-size:18px; line-height:16px; padding:0; margin:0; touch-action:manipulation; }
+  #miniZoomRow button:disabled{ opacity:.4; cursor:default; }`;
   document.head.appendChild(miniStyle);
   const miniArrow = new Image(); miniArrow.src = MAP_ARROW; const miniX = new Image(); miniX.src = MAP_X;
   miniCv.addEventListener('click', () => openMap(mapTab));
-  try{ const hc = document.getElementById('henkCompass'); if(hc) hc.style.top = 'calc(' + (MINI + 52) + 'px + env(safe-area-inset-top,0px))'; }catch(e){}
+  try{ const hc = document.getElementById('henkCompass'); if(hc) hc.style.top = (MINI + 52) + 'px'; }catch(e){}
   let miniAt = 0, miniQ = null, miniQAt = 0;
+  setMiniZoom(miniZi);
   function miniTick(now){
     if(now - miniAt < 120) return; miniAt = now;
     const busy = battleActive || menuIsOpen() || shopOpen || fishing || chopping || mining || station || pocket || (typeof lockpick !== 'undefined' && lockpick) || (typeof FQ !== 'undefined' && FQ.isOpen && FQ.isOpen());
@@ -23953,7 +24048,7 @@
     const comp = mapCompose(); if(!comp) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1), D = Math.round((MINI + 12) * dpr);
     if(miniCv.width !== D){ miniCv.width = miniCv.height = D; }
-    const g = miniCv.getContext('2d'), c = D / 2, r = MINI / 2 * dpr, k = r / (MINI_R * MG.S);
+    const MINI_R = MINI_ZOOMS[miniZi], g = miniCv.getContext('2d'), c = D / 2, r = MINI / 2 * dpr, k = r / (MINI_R * MG.S);
     g.clearRect(0, 0, D, D);
     g.save(); g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.clip();
     g.fillStyle = '#ece0bd'; g.fillRect(0, 0, D, D);
