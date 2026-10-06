@@ -19831,7 +19831,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v149';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v149.1';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -23777,6 +23777,11 @@
     for(const k in plants){ const { d, pts } = plants[k]; add('foraging', k, k === 'secret' ? "Grandma's secret mushrooms" : (ITEMS[d.item] ? ITEMS[d.item].name : k), d.lv, d.item, pts); }
     for(const f of FISH_SPOTS){ const fish = f.fish, d = fish && FISH[fish];
       add('fishing', fish || 'bend', fish ? (ITEMS[fish] ? ITEMS[fish].name : fish) : f.name, d ? d.lv : 7, fish || 'angler_map', [[f.scene, f.rings[0][0], f.rings[0][1]]], f.name); }
+    // 6 Oct (user): the two fish without a sign - frost pike in the two northern ice holes, golden carp in the hidden pond
+    if(FISH.frost_pike && typeof FP !== 'undefined' && FP.rings){ const sh = FP.rings[FP.rings.length - 1];
+      add('fishing', 'frost_pike', ITEMS.frost_pike.name, FISH.frost_pike.lv, 'frost_pike', FP.rings.filter(h => h !== sh).map(h => ['frostpeak', h[0], h[1]]), 'The northern ice holes'); }
+    if(FISH.golden_carp && typeof HIDDEN_PONDS !== 'undefined') for(const P of HIDDEN_PONDS)
+      add('fishing', 'golden_carp', ITEMS.golden_carp.name, FISH.golden_carp.lv, 'golden_carp', [[P.scene, P.c + P.w / 2, P.r + P.h / 2]], 'The hidden pond');
     for(const k in R) R[k].sort((a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
     mapTrainCache = R; return R;
   }
@@ -23840,7 +23845,7 @@
       const lock = mapSel.lv > skillLevel(mapSkill);
       for(const s of mapSel.spots.slice(0, 3)){
         const lab = mapSel.one ? mapSel.one : s.n + ' ' + (s.n === 1 ? mapSel.name.replace(/s$/, '') : mapSel.name);
-        const cv = itemIconCanvas(mapSel.item, 22); mapMarker('spot' + (lock ? ' lock' : ''), s.x, s.y, cv, lab + (lock ? ' (Lv ' + mapSel.lv + ')' : ''));
+        const cv = mapIcon(mapSel.item, 22); mapMarker('spot' + (lock ? ' lock' : ''), s.x, s.y, cv, lab + (lock ? ' (Lv ' + mapSel.lv + ')' : ''));
       }
     }
     const me = mapPlayerXY();
@@ -23849,6 +23854,8 @@
   function mapScrollTo(x, y){ const w = document.getElementById('mpWrap'), inn = document.getElementById('mpIn');
     w.scrollTo({ left: x / MG.W * inn.offsetWidth - w.clientWidth / 2, top: y / MG.H * inn.offsetHeight - w.clientHeight / 2 }); }
   function mapSetZoom(z){ mapZoom = z; document.getElementById('mpIn').style.width = (z * 100) + '%'; }
+  // Grandpa's secret bend has no fish of its own: its row shows his angler's map (a sprite, not an item)
+  const mapIcon = (item, size) => ITEMS[item] ? itemIconCanvas(item, size) : spriteIconCanvas('item_' + item, size);
   function mapRenderTrain(){
     const S = mapPanel.querySelector('.mpSkills'), L = mapPanel.querySelector('.mpList'); S.innerHTML = ''; L.innerHTML = '';
     for(const k of MAP_SKILLS){ const b = document.createElement('button'); b.type = 'button'; b.className = k === mapSkill ? 'on' : '';
@@ -23857,7 +23864,7 @@
     const lv = skillLevel(mapSkill);
     for(const e of mapTraining()[mapSkill]){
       const b = document.createElement('button'); b.type = 'button'; b.className = 'mpRow' + (e.lv > lv ? ' lock' : '') + (mapSel === e ? ' on' : '');
-      b.appendChild(itemIconCanvas(e.item, 22));
+      b.appendChild(mapIcon(e.item, 22));
       const tx = document.createElement('span'); tx.className = 'tx'; tx.textContent = e.name;
       const sub = document.createElement('i'); sub.textContent = (e.lv > lv ? 'Needs ' + SKILLS[mapSkill].name + ' ' + e.lv : 'Level ' + e.lv) + ' - ' + [...new Set(e.spots.slice(0, 3).map(s => s.area))].join(', ');
       tx.appendChild(sub); b.appendChild(tx);
