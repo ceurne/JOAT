@@ -9008,7 +9008,7 @@
     if(id === 'frostpeak') return !!(bwMet.has('fp_golem') || quests.wolfhunt || quests.icecontest || quests.supplycart || (quests.fraying && !['mob', 'grizelda'].includes(quests.fraying.state)));
     return false;
   }
-  const TP_KEY = 'open_world_tp', TP_REGEN_MS = 4000, TP_REST_MS = 120000;
+  const TP_KEY = 'open_world_tp', TP_REGEN_MS = 1000, TP_REST_MS = 120000;
   let tpState = { spent: 0, at: 0, last: 0 };
   try{ Object.assign(tpState, JSON.parse(localStorage.getItem(TP_KEY)) || {}); }catch(e){}
   const tpSpentNow = () => Math.max(0, tpState.spent - Math.floor((Date.now() - tpState.at) / TP_REGEN_MS));
@@ -9111,7 +9111,7 @@
   }
   function playerMaxMp(){ return 6 + skillLevel('magic')*4 + (bwMet.has('blessing_mp') ? 2 : 0); } // + Ambrose's blessing (quest 3)
   function fireballDamage(){
-    const power = skillLevel('magic')*3 + 1;
+    const power = skillLevel('magic')*2 + 1;
     return Math.max(1, Math.round(power + (Math.random()*3-1)));
   }
 
@@ -9224,7 +9224,7 @@
       enemyId, quest: !!(opts && opts.quest),   // quest fights get their own music
       enemyHp: def.maxHp, enemyMaxHp: def.maxHp,
       playerHp: Math.round(playerMaxHp() * homeRestedBonus()), playerMaxHpVal: Math.round(playerMaxHp() * homeRestedBonus()),   // round 5: well rested after sleeping at home
-      playerMp: playerMaxMp(), playerMaxMpVal: playerMaxMp(),
+      playerMp: worldMp(), playerMaxMpVal: playerMaxMp(),
       move: null, fx: [], timers: [], ko: null, lastEnemyMove: null,
     };
     { const pid = activePet(); if(pid && petWith(pid) && petLevel(pid) >= PET_FIGHT_LV) battle.petMaxHp = battle.petHp = petMaxHpFor(pid); }
@@ -9808,7 +9808,7 @@
     const def = ENEMIES[battle.enemyId];
     spendMp('frostbolt'); setBattleLog('Frost gathers at your fingertips...'); Sfx.play('spell');
     startMove('player', 'playerFrostBolt', () => {
-      const dmg = spellRoll(spellPower() * 3 + 4);
+      const dmg = spellRoll(spellPower() * 2 + 4);
       battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, SPELL_ICE);
       const k = 2.1, now0 = battleClock;
@@ -9849,7 +9849,7 @@
     spendMp('lightning'); battle.castKind = 'storm'; setBattleLog('The sky goes dark...'); Sfx.play('spell');
     battleAfter(150, () => addBattleFx({ type: 'anim', key: 'fx_strike', n: 13, fps: 12, actor: 'enemy', feet: true, ay: 1, dy: 12, scale: 3, life: 1100 }));
     startMove('player', 'playerCast', () => {
-      const dmg = spellRoll(spellPower() * 5 + 6);
+      const dmg = spellRoll(spellPower() * 3.3 + 6);
       battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#ffe36a');
       addBattleFx({ type: 'flash', life: 180 }); addBattleFx({ type: 'shake', amp: 8, dur: 260 });
@@ -18840,7 +18840,7 @@
         box.appendChild(r);
       }
       if(knownSpells.some(id => SPELLS[id] && SPELLS[id].tp)){ const n = document.createElement('div'); n.className = 'statHint';
-        n.textContent = `Mana for teleports: ${worldMp()}/${playerMaxMp()} (it grows back slowly). One teleport, then your magic needs two minutes' rest.`; box.appendChild(n); }
+        n.textContent = `Mana: ${worldMp()}/${playerMaxMp()}. Spells in fights and teleports use the same mana. It grows back by itself, and every fight you win gives a little back. One teleport, then your magic needs two minutes' rest.`; box.appendChild(n); }
       const next = Object.values(SPELLS).filter(S => S.lv > skillLevel('magic')).sort((a, b) => a.lv - b.lv)[0];
       if(next){ const n = document.createElement('div'); n.className = 'statHint'; n.textContent = `Next spell: ${next.name} at Magic ${next.lv}.`; box.appendChild(n); }
       statsList.appendChild(box);
@@ -20258,7 +20258,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v161';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v162';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -26582,18 +26582,18 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     startMove('player', 'playerCast', onImpact, () => battleAfter(300, onDone));
   }
   PLAYER_ACTIONS.spark = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You snap your fingers...');
-    n8Cast('spark', 'storm', () => { const dmg = spellRoll(spellPower() * 0.8 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+    n8Cast('spark', 'storm', () => { const dmg = spellRoll(spellPower() * 0.55 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#ffe36a'); n8Anim('fx_spark_hit', 'enemy', { scale: 1.8, fps: 16 });
       setBattleLog(`A spark zaps the ${E.name} for ${dmg} damage!`); gainSkillXp({ magic: 8 + dmg * 2, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('fx_spark_fly', { start: battleClock + 250, dur: 370, fps: 18, scale: 1.4 })); };
   PLAYER_ACTIONS.gust = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You fill your lungs...');
-    n8Cast('gust', 'holy', () => { const dmg = spellRoll(spellPower() * 1.4 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+    n8Cast('gust', 'holy', () => { const dmg = spellRoll(spellPower() * 0.95 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#e8eef4'); n8Anim('fx_breath', 'enemy', { scale: 2.4, fps: 14, dx: 8 }); addBattleFx({ type: 'react', actor: 'enemy', hit: true });
       if(battle.enemyHp > 0){ battle.n8last = true; addBattleFx({ type: 'num', actor: 'enemy', text: 'Whoosh!', color: '#e8eef4' }); }
       setBattleLog(`A gust of wind slams into the ${E.name}! ${dmg} damage, and it is blown right back.`); gainSkillXp({ magic: 12 + dmg * 2, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('fx_wind', { start: battleClock + 200, dur: 420, fps: 14, scale: 2 })); };
   PLAYER_ACTIONS.missile = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('Three little lights gather round your hand...');
-    const total = spellRoll(spellPower() * 2.6 + 4), parts = [Math.ceil(total / 3), Math.ceil(total / 3), total - 2 * Math.ceil(total / 3)].map(v => Math.max(1, v));
+    const total = spellRoll(spellPower() * 1.75 + 4), parts = [Math.ceil(total / 3), Math.ceil(total / 3), total - 2 * Math.ceil(total / 3)].map(v => Math.max(1, v));
     n8Cast('missile', 'holy', () => {
       parts.forEach((d, i) => battleAfter(i * 170, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - d); landHit('enemy', d, '#fff2b0');
         n8Anim('fx_holyimp', 'enemy', { scale: 1.6, fps: 18, dy: -14 + i * 14 }); }));
@@ -26610,7 +26610,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       battle.n8wispFx = { type: 'anim', key: 'fx_orb', n: N8_FX_N.fx_orb || 9, fps: 10, loop: true, actor: 'player', dx: 44, dy: -64, scale: 0.6, life: 120000 }; addBattleFx(battle.n8wispFx);
       setBattleLog('A wisp of blue flame hovers by your shoulder. It looks keen.'); gainSkillXp({ magic: 40 }); }, onDone); };
   function n8WispShot(done){
-    const E = ENEMIES[battle.enemyId], dmg = spellRoll(spellPower() * 1.5 + 3);
+    const E = ENEMIES[battle.enemyId], dmg = spellRoll(spellPower() * 1 + 3);
     n8Fly('fx_eball', { start: battleClock, dur: 470, fps: 14, scale: 0.55, dy0: -58 });
     battleAfter(470, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - dmg); landHit('enemy', dmg, '#8fd0ff');
       n8Anim('fx_eballhit', 'enemy', { scale: 0.7, fps: 14 }); setBattleLog(`The wisp flings a ball of blue fire! ${dmg} damage.`);
@@ -32726,19 +32726,19 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         ctx.globalAlpha = a * 0.6 * Math.sin(ph * Math.PI); ctx.strokeStyle = k % 2 ? '#f4e2b8' : '#d8b880'; ctx.lineWidth = 2 * Z; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + 26 * Z, y - 2 * Z); ctx.stroke(); } }
       ctx.restore(); }; }
   PLAYER_ACTIONS.sandstorm = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You whirl your arms. The ground starts to blow away...');
-    n8Cast('sandstorm', 'holy', () => { const dmg = spellRoll(spellPower() * 1.2 + 3); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+    n8Cast('sandstorm', 'holy', () => { const dmg = spellRoll(spellPower() * 0.8 + 3); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#e8c890');
       if(battle.enemyHp > 0) battle.n27sand = 2;
       setBattleLog(`A sandstorm swallows the ${E.name}! ${dmg} damage, and it can't see a thing for two turns.`); gainSkillXp({ magic: 30 + dmg * 2, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('n27sand', { start: battleClock + 150, dur: 60000 })); };
   PLAYER_ACTIONS.drain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You reach out with your mind...');
-    n8Cast('drain', 'shadow', () => { const dmg = Math.min(battle.enemyHp, spellRoll(spellPower() * 3.2 + 4)); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+    n8Cast('drain', 'shadow', () => { const dmg = Math.min(battle.enemyHp, spellRoll(spellPower() * 2.15 + 4)); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#d05a8a'); addBattleFx({ type: 'anim', key: 'fx_dark2', n: 15, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 8, scale: 2.2, life: 1100 });
       const heal = Math.min(battle.playerMaxHpVal - battle.playerHp, Math.ceil(dmg / 2)); battle.playerHp += heal;
       battleAfter(500, () => { if(!battle) return; addBattleFx({ type: 'mend', actor: 'player', life: 900 }); addBattleFx({ type: 'num', actor: 'player', text: `+${heal}`, color: '#8be07a' }); });
       setBattleLog(`You drain the ${E.name}: ${dmg} damage, and ${heal} HP flows back to you.`); gainSkillXp({ magic: 18 + dmg * 2, hitpoints: dmg * 1.33 }); }, onDone); };
   PLAYER_ACTIONS.chain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('The sky goes dark. Darker than that...');
-    const total = spellRoll(spellPower() * 6.5 + 8), parts = [Math.ceil(total * 0.45), Math.ceil(total * 0.33)]; parts.push(Math.max(1, total - parts[0] - parts[1]));
+    const total = spellRoll(spellPower() * 4.35 + 8), parts = [Math.ceil(total * 0.45), Math.ceil(total * 0.33)]; parts.push(Math.max(1, total - parts[0] - parts[1]));
     n8Cast('chain', 'storm', () => {
       parts.forEach((d, i) => battleAfter(i * 260, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - d); landHit('enemy', d, '#ffe36a');
         addBattleFx({ type: 'anim', key: 'fx_strike', n: 13, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 12, dx: (i - 1) * 14, scale: 2.6 + i * 0.2, life: 900 });
@@ -34348,6 +34348,607 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       const h = mf0.apply(this, arguments);
       if(text && /snow wolves|wolves on the pass/i.test(text) && (!h || h.place || /Bjorn/.test(text) === false)) return { i: 0, scene: 'frostpeak', x: 15, y: 92, place: true };
       return h;
+    }; }
+
+  // ---------- v162 magic, joystick side, desert map (scratchpad n30)
+  // ---------- the joystick on either side (user, 16 Oct: her brother wants it on the right) ----------
+  // Menu > Settings > Joystick: Left (as before) or Right. Right swaps the stick and the Interact button, and the Menu
+  // button moves along under Interact. The stick reads its own place on screen, so nothing else changes.
+  const JOY_SIDE_KEY = 'open_world_joy_side';
+  let joySide = 'left';
+  try{ if(localStorage.getItem(JOY_SIDE_KEY) === 'right') joySide = 'right'; }catch(e){}
+  { const st = document.createElement('style');
+    st.textContent = `#wrap.joyRight #barTopRow{ flex-direction: row-reverse; }
+      #wrap.joyRight #barBottomRow{ padding-left: 0; padding-right: calc(96px + 14px); }
+      #wrap.joyRight #creditsBtn{ right: auto; left: 10px; }`;
+    document.head.appendChild(st); }
+  function applyJoySide(){ const w = document.getElementById('wrap'); if(w) w.classList.toggle('joyRight', joySide === 'right'); }
+  applyJoySide();
+  { const rs0 = renderSettings;
+    renderSettings = function(){
+      rs0.apply(this, arguments);
+      const L = document.getElementById('settingsList'); if(!L) return;
+      const r = document.createElement('div'); r.className = 'setRow';
+      r.innerHTML = '<div class="setLabel">Joystick</div><div class="setHint">Which side of the screen the stick you walk with is on.</div>';
+      const seg = document.createElement('div'); seg.className = 'segRow';
+      for(const [k, lab] of [['left', 'Left'], ['right', 'Right']]){
+        const b = document.createElement('button'); b.className = 'uiBtn' + (k === joySide ? '' : ' grey'); b.textContent = lab;
+        b.addEventListener('click', () => { joySide = k; try{ localStorage.setItem(JOY_SIDE_KEY, k); }catch(e){} applyJoySide(); renderSettings(); });
+        seg.appendChild(b);
+      }
+      r.appendChild(seg);
+      // right under the sounds, with the other "how the game feels" settings
+      const rows = [...L.querySelectorAll('.setRow')], snd = rows.find(x => (x.querySelector('.setLabel') || {}).textContent === 'Sounds');
+      if(snd && snd.nextSibling) L.insertBefore(r, snd.nextSibling); else L.appendChild(r);
+    }; }
+  // ---------- magic balance (user, 16 Oct, answers_m11: A + B1) ----------
+  // The mana you use in a fight stays used: the fight starts with what is left on the bar (worldMp, the teleport bar),
+  // and when it ends, what is left in the fight goes back on the bar. After the bot test (answers_m13, B) it grows back
+  // 1 point a second (reps.py), and a win gives a tenth of the bar back.
+  // A mana potion in a fight fills it, so that carries over too. A fight doesn't start the teleports' two-minute rest.
+  { const eb0 = endBattle;
+    endBattle = function(outcome){
+      const left = battle && typeof battle.playerMp === 'number' ? battle.playerMp : null;
+      const r = eb0.apply(this, arguments);
+      if(left !== null){
+        tpState.spent = Math.max(0, playerMaxMp() - left - (outcome === 'victory' ? Math.round(playerMaxMp() * 0.1) : 0)); tpState.at = Date.now();
+        try{ localStorage.setItem(TP_KEY, JSON.stringify(tpState)); }catch(e){}
+      }
+      return r; }; }
+  // ---------- a gold "!" over people with a new quest (answers_m9: "teken") ----------
+  // One row per quest: who gives it and when they would offer it if you talked to them now (the same tests their own
+  // talk uses). It goes as soon as the quest is taken. Hotspot starts (Glint's nest, the skating ice) are not people.
+  const QMARK = (() => {
+    const OUT = '#2a1a10', CREAM = '#fbf1d6', CREAM2 = '#e3d2a8', GOLD = '#f4c542', GOLD2 = '#c98e1c', GOLD3 = '#fff2a8';
+    const cv = document.createElement('canvas'); cv.width = 14; cv.height = 17; const g = cv.getContext('2d');
+    const P = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+    for(let y = 1; y < 14; y++) for(let x = 1; x < 13; x++){ if((x === 1 || x === 12) && (y === 1 || y === 13)) continue; P(x, y, y < 10 ? CREAM : CREAM2); }
+    for(let x = 2; x < 12; x++){ P(x, 0, OUT); P(x, 14, OUT); }
+    for(let y = 2; y < 13; y++){ P(0, y, OUT); P(13, y, OUT); }
+    for(const [x, y] of [[1, 1], [12, 1], [1, 13], [12, 13], [6, 15], [7, 15], [6, 16]]) P(x, y, OUT);
+    P(6, 14, CREAM2); P(7, 14, CREAM2);
+    for(let y = 3; y < 9; y++){ P(6, y, y < 7 ? GOLD3 : GOLD); P(7, y, y > 4 ? GOLD2 : GOLD); }
+    P(6, 2, OUT); P(7, 2, OUT);
+    for(const [x, y] of [[6, 10], [7, 10], [6, 11], [7, 11]]) P(x, y, GOLD);
+    P(6, 10, GOLD3); P(7, 11, GOLD2);
+    return cv; })();
+  const qmDone = id => !!(quests[id] && quests[id].state === 'done');
+  const QM_GIVERS = [
+    ['npc_brunhilde', () => !quests.wraith],
+    ['npc_hilda', () => !quests.bronze],
+    ['npc_olaf', () => !quests.tonic],
+    ['npc_pip', () => !quests.dog],
+    ['npc_pip', () => qmDone('dog') && !quests.pip_lesson],
+    ['npc_pip', () => petsUnlocked() && !pets.owned.biscuit && qmDone('dog') && !bwMet.has('pup_later') && !quests.pup],
+    ['npc_cedric', () => !quests.horse],
+    ['npc_ambrose', () => !quests.toe],
+    ['npc_ambrose', () => !quests.journal && (qmDone('toe') || bwMet.has('ambrose_told'))],
+    ['npc_ambrose', () => !quests.pages && qmDone('journal')],
+    ['npc_lorenzo', () => !quests.song],
+    ['npc_grubb', () => !quests.tax],
+    ['npc_rosie', () => !quests.cake],
+    ['npc_pennywhistle', () => !quests.witch && !!companion && bwMet.has('north_gate_open')],
+    ['npc_wexley', () => Object.values(BOSSES).some(B => !quests[B.quest] && combatLevel() >= B.lvl && (!B.needs || B.needs()))],
+    ['npc_sigrun', () => !quests.sigruntea],
+    ['npc_bjorn', () => !quests.wolfhunt],
+    ['npc_ingrid', () => !quests.icecontest],
+    ['npc_elin', () => !quests.tomaswolf && bwMet.has('npc_tomas')],
+    ['npc_hulda', () => !quests.supplycart || !quests.magnus],
+    ['npc_sven', () => !quests.sventackle],
+    ['npc_frida', () => !quests.sledrace],
+    ['npc_brenna', () => !quests.mead],
+    ['npc_tomas', () => !quests.snowcontest],
+    ['npc_olle', () => !quests.snowmail],
+    ['npc_astrid', () => !quests.furfeud],
+    ['npc_ragna', () => qmDone('mead') && !quests.rimebell],
+    ['npc_leif', () => !quests.goat],
+    ['npc_orvar', () => !quests.saga],
+    ['npc_aldric', () => (!quests.memories && frayAt('return')) || (qmDone('memories') && !quests.heart)],
+    ['npc_wizard', () => !quests.water && frayAt('return')],
+    ['npc_saffra', () => !(pets.fx && pets.fx.st) && frxCan()],
+    ['npc_hesk', () => !quests.gate],
+    ['npc_grizelda', () => petsUnlocked() && !pets.owned.gerald && geraldFree() && !(pets.earn && pets.earn.pond && pets.earn.pond.st)],
+  ];
+  // a tutor with a job you are good enough for and have not been given yet
+  function qmTutorJob(prefix){
+    for(const [tutor, sprite] of Object.entries(TUTOR_NPC)){
+      if(sprite !== prefix || !skillTutors.has(tutor)) continue;
+      for(const T of TUTOR_TASKS[tutor]){
+        const q = quests[taskId(tutor, T.lv)];
+        if(q && q.state === 'done') continue;
+        if(!q && taskLevel(tutor) >= (T.req || T.lv)) return true;
+        break;
+      }
+    }
+    return false;
+  }
+  function npcHasNewQuest(n){
+    if(!n || !n.spritePrefix || !n.lines || !n.lines.length || n.noQuestMark) return false;
+    for(const [p, when] of QM_GIVERS){ if(p !== n.spritePrefix) continue; try{ if(when()) return true; }catch(e){} }
+    try{ return qmTutorJob(n.spritePrefix); }catch(e){ return false; }
+  }
+  // the old camel at the caravan camp is not one of the people, so he gets his own spot
+  function camelHasNewQuest(){
+    try{ return currentScene.id === N12_SC && !(typeof seaDone === 'function' && seaDone()) && (!quests.prophecy || seaCanStart()); }catch(e){ return false; }
+  }
+  const QMARK_EVERY = 1000;
+  let qmarkAt = -1e9, qmarkScene = null, qmarkSet = new Set();
+  function refreshQuestMarks(){
+    qmarkAt = clockNow; qmarkScene = currentScene && currentScene.id; qmarkSet = new Set();
+    if(!currentScene || !currentScene.npcs) return;
+    for(const n of currentScene.npcs) if(npcHasNewQuest(n)) qmarkSet.add(n);
+  }
+  function drawQmark(x, y){
+    const bob = Math.round(Math.sin(clockNow / 260) * 1.5);
+    ctx.drawImage(QMARK, Math.round(x - 7 * QMARK_PX), Math.round(y - 17 * QMARK_PX + bob), 14 * QMARK_PX, 17 * QMARK_PX);
+  }
+  function drawQuestMarks(camX, camY){
+    if(!currentScene || !currentScene.npcs || battleActive || tpFx || window.__noQmark) return;
+    if(qmarkScene !== currentScene.id || clockNow - qmarkAt > QMARK_EVERY) refreshQuestMarks();
+    ctx.save(); ctx.imageSmoothingEnabled = false;
+    for(const n of qmarkSet){
+      if(n.say || npcAlpha(n) <= 0 || (dialogueActive && dialogueNpc === n)) continue;
+      const r = MANIFEST[`${n.spritePrefix}_down_idle`] || MANIFEST[`${n.spritePrefix}_${n.dir}_idle`]; if(!r) continue;
+      const s = n.scale || 1, k = s / REF_SCALE, frameTop = n.y - camY - r[3] * s + 18 * k;
+      drawQmark(n.x - camX, frameTop + QMARK_HEAD * s);
+    }
+    if(camelHasNewQuest() && !dialogueActive) drawQmark(CM_SPOT.x - camX, CM_SPOT.y - camY - QMARK_CAMEL);
+    ctx.restore();
+  }
+  // where the head starts inside a character frame (the frames have empty space above the head), the size of one
+  // marker pixel on screen, and how high over the camel's spot his head is
+  const QMARK_HEAD = 10, QMARK_PX = 1, QMARK_CAMEL = 70;
+  { const df0 = drawFireworks; drawFireworks = function(camX, camY){ try{ drawQuestMarks(camX, camY); }catch(e){} return df0.apply(this, arguments); }; }
+  // ---------- Collection Book extras (answers_m8, all five) ----------
+  // 1 a stamp and a few copper when a page is half full; 2 Balthazar says something about a new find; 3 an empty slot
+  // also says where (gathering pages); 4 the whole book: a golden book in the cabinet, the title "The Collector" and a
+  // party at Grandpa's; 5 rare finds (a big fish, a golden acorn) get a shiny gold edge.
+  if(!book.half) book.half = [];
+  // pages done before this came in already had their halfway moment
+  for(const id of book.done) if(!book.half.includes(id)) book.half.push(id);
+  saveBook();
+  const bookHalfFull = pg => { const L = pg.items(); return L.length > 1 && bookCount(pg) >= Math.ceil(L.length / 2); };
+  const bookHalfPay = pg => pg.items().length * 2;
+  { const bc0 = bookCheckPages;
+    bookCheckPages = function(){
+      bc0.apply(this, arguments);
+      for(const pg of BOOK_PAGES) if(!book.half.includes(pg.id) && !book.done.includes(pg.id) && !bookPending.includes('half:' + pg.id) && bookHalfFull(pg)) bookPending.push('half:' + pg.id);
+    }; }
+  { const fb0 = flushBook;
+    flushBook = function(){
+      const nx = bookPending[0];
+      if(nx && nx.startsWith('half:')){
+        bookPending.shift(); const pg = bookPage(nx.slice(5)); if(!pg || book.half.includes(pg.id)) return true;
+        book.half.push(pg.id); saveBook(); const c = bookHalfPay(pg); addCoins(c);
+        queuePopup({ kind: 'got', label: 'Collection Book', title: `${pg.name}: halfway!`, sprite: pg.icon, rows: [
+          { icon: 'coin', text: `+${formatMoney(c)}` }, 'A stamp on the page. The other half gets you the title and the trophy.'] });
+        return true;
+      }
+      const r = fb0.apply(this, arguments);
+      if(BOOK_PAGES.every(p => book.done.includes(p.id)) && !bwMet.has('book_all')){
+        markMet('book_all');
+        queuePopup({ kind: 'got', label: 'Collection Book', title: 'The whole book!', sprite: 'item_henk_journal', rows: [
+          { sprite: 'item_henk_journal', text: 'A golden book for your cabinet at home' }, 'Title "The Collector" (Menu > Skills)', 'Grandpa wants to see you. Something about a party.'] });
+      }
+      return r;
+    }; }
+  { const et0 = earnedTitles;
+    earnedTitles = function(){ const out = et0.apply(this, arguments);
+      if(bwMet.has('book_all')) out.push({ id: 'collector', name: 'The Collector', address: 'Collector', from: 'Every page of the Collection Book' });
+      return out; }; }
+  // the party at Grandpa's, the first time you talk to him after
+  { const gp0 = grandpaPages;
+    grandpaPages = function(npc, speaker){
+      if(!bwMet.has('book_all') || bwMet.has('book_party')) return gp0.apply(this, arguments);
+      const G = text => ({ speaker, portrait: 'npc_grandpa', text });
+      return [ G("There they are! The one who filled the whole book. Every fish, every rock, every odd boot."),
+        G("Pizza! Voula! Come out here. We're having a party."),
+        narrate('Grandma brings out a cake. Voula brings out a second cake, in case the first one goes too fast. It does.'),
+        { ...G("I filled half a book once, in 1974. Then Pizza used it to light the stove."), onShow(){ markMet('book_party'); startFireworks('fishing', 'The Collector', true); } },
+        G("Well done. Really. Now go and catch me something for supper.") ];
+    }; }
+  // the golden book on top of the trophy cabinet
+  SCENES.house_interior.decor.push({ row: CAB.by / TILE + 0.01, worldX: CAB.cx - 10, worldY: CAB.by - CAB.h - 14, w: 20, h: 16, draw(sx, sy){
+    if(!bwMet.has('book_all')) return; const m = MANIFEST.item_henk_journal; if(!m) return;
+    const k = 18 / Math.max(m[2], m[3]);
+    ctx.save(); ctx.filter = 'sepia(1) saturate(3.2) hue-rotate(-8deg) brightness(1.25)';
+    drawSprite('item_henk_journal', Math.round(sx + 10 - m[2] * k / 2), Math.round(sy + 15 - m[3] * k), m[2] * k, m[3] * k); ctx.restore();
+    const p = (clockNow / 900) % 1; if(p < 0.35){ const a = Math.sin(p / 0.35 * Math.PI); ctx.fillStyle = `rgba(255,248,200,${a})`; ctx.fillRect(Math.round(sx + 15), Math.round(sy + 4), 1, 5); ctx.fillRect(Math.round(sx + 13), Math.round(sy + 6), 5, 1); } } });
+  HOTSPOTS.filter(h => h.scene === 'house_interior' && h.x === CAB.cx && h.y === CAB.by + 8).forEach(h => { const p0 = h.pages;
+    h.pages = () => { const out = p0(); if(bwMet.has('book_all')) out.push(narrate('On top, in the middle, a golden book. The whole Collection Book, every page. Voula keeps a cloth next to it.')); return out; }; });
+
+  // 2: Balthazar on a new find (only when he is with you; not more than once a minute and a half)
+  const BOOK_QUIP = {
+    fish: ["Put it in the book. Not in the pan. ...Fine, the pan.", "A new fish. It looks as surprised as you do.", "Write down how big it was. Grandpa will make it bigger anyway."],
+    wood: ["New wood. It smells like a different tree. Because it is.", "Into the book with it. Pressed, like a flower. A very heavy flower."],
+    ores: ["Shiny. Not as shiny as me, but shiny.", "A new rock. Hilda will want to hit it."],
+    plants: ["Can I eat it? No? Then why are we keeping it?", "A new plant. Grandma will know nine things to do with it."],
+    food: ["Something new to eat. I volunteer to test it.", "That smells good. Write it down before you forget how you did it."],
+    potions: ["A new potion. Don't drink it in front of me. I've seen Olaf's.", "It's bubbling. Is it meant to bubble? Write that down too."],
+    metal: ["You made that? With your hands? I'd have used a hoof. Badly.", "Hilda would say it's adequate. From her that's a hug."],
+    odd: ["Now THAT is a find. Nobody else has one of those. Probably for a reason.", "Odd. I like odd. I'm a talking pig."],
+    monsters: ["Put it in the book. Then never go near one again.", "Draw it uglier than it was. It deserves it."] };
+  let bookQuipAt = -1e9, bookQuipNext = null;
+  function bookQuip(pgId){
+    if(!(companion && activePet() === 'balthazar') || clockNow - bookQuipAt < 90000 || bookQuipNext) return;
+    const L = BOOK_QUIP[pgId]; if(!L) return;
+    bookQuipNext = L[Math.floor(Math.random() * L.length)]; bookQuipAt = clockNow;
+  }
+  setInterval(() => {
+    if(!bookQuipNext || battleActive || dialogueActive || popupOpen || cutsceneLocked) return;
+    const t = bookQuipNext; bookQuipNext = null; petSay(t, 3600);
+  }, 700);
+  { const bs0 = bookSeen;
+    bookSeen = function(){
+      const had = new Set(Object.keys(book.items).filter(k => book.items[k] > 0));
+      const r = bs0.apply(this, arguments);
+      for(const k of Object.keys(book.items)) if(book.items[k] > 0 && !had.has(k)){ const pg = pageOf(k); if(pg){ bookQuip(pg.id); break; } }
+      return r; }; }
+  { const bm0 = bookMon;
+    bookMon = function(id){ const first = !(book.mon[id] > 0); const r = bm0.apply(this, arguments); if(first) bookQuip('monsters'); return r; }; }
+
+  // 3: where to look, for an empty slot on the gathering pages (fish: the area; Grandpa's map gives the spot)
+  const BOOK_PLACE = { outdoor: 'the meadow by the house', village: 'Puddlebottom', misty_forest: 'Wetsock Woods', brightwood: 'Brightwood',
+    fenmire: 'the Fenmire', frostpeak: 'Frostpeak', fp_glacier: 'the glacier', old_mill: 'the old mill', desert: 'the desert', crack: 'the Crack', crack_cave: 'deep in the Crack' };
+  const bookPlaceName = sid => BOOK_PLACE[sid] || (/^fp_mine/.test(sid) ? 'the old mine' : /^fp_/.test(sid) ? 'Frostpeak' : /^bw_/.test(sid) ? 'Brightwood' : /^ds_/.test(sid) ? 'the desert' : '');
+  const BOOK_ORDER = ['outdoor', 'village', 'misty_forest', 'brightwood', 'old_mill', 'fenmire', 'frostpeak', 'fp_glacier', 'fp_mine_yard', 'desert', 'crack', 'crack_cave'];
+  const BOOK_FISH_AREA = { 'The Pond': 'the pond by the house', 'The Forest': 'Wetsock Woods' };
+  let bookWhere = null;
+  function bookWhereOf(pgId, id){
+    if(!bookWhere){
+      bookWhere = {}; const add = (k, sid) => { const m = bookWhere[k] || (bookWhere[k] = {}); m[sid] = (m[sid] || 0) + 1; };
+      for(const [sid, sc] of Object.entries(SCENES)){ if(!sc.map) continue;
+        for(let r = 0; r < sc.map.length; r++){ const row = sc.map[r]; if(!row) continue; for(let c = 0; c < row.length; c++){ const W = TREE_WOOD[row[c]]; if(W && W.log) add(W.log, sid); } } }
+      for(const o of ORE_ROCKS){ const d = ORE_DEF[o.ore]; if(d) add(d.item, o.scene); }
+      for(const f of FORAGE_SPOTS){ const d = FORAGE[f.kind]; if(d) add(d.item, f.scene); }
+    }
+    if(pgId === 'fish'){ if(bwMet.has('fishmap')) return ''; const w = fishWhereOf(id); return w ? (BOOK_FISH_AREA[w[0]] || w[0].replace(/^The /, 'the ')) : ''; }
+    const m = bookWhere[id]; if(!m) return '';
+    // the first place on the way (from home outwards) that has it
+    const sid = BOOK_ORDER.find(s => m[s]) || Object.keys(m).find(s => bookPlaceName(s));
+    return sid ? bookPlaceName(sid) : '';
+  }
+  for(const pg of BOOK_PAGES){
+    if(!['fish', 'wood', 'ores', 'plants'].includes(pg.id)) continue;
+    const h0 = pg.hint;
+    pg.hint = id => { const base = h0(id), w = (() => { try{ return bookWhereOf(pg.id, id); }catch(e){ return ''; } })(); return w && !id.startsWith('gem_') ? `${base}, ${w}` : base; };
+  }
+
+  // 5: rare finds shine (a fish in the top quarter of its weight, and the rare odd finds)
+  const BOOK_RARE = new Set(['golden_acorn', 'fossil_tooth', 'blue_egg', 'amber_gnat', 'pizza_pike', 'gem_ruby', 'black_truffle']);
+  const bookShiny = (pg, id) => pg.id === 'fish' ? (book.kg[id] !== undefined && fishFrac(id, book.kg[id]) >= 0.75) : (!pg.monsters && BOOK_RARE.has(id));
+  { const fw0 = fishWeigh;
+    fishWeigh = function(id){
+      const was = book.kg[id] !== undefined && fishFrac(id, book.kg[id]) >= 0.75;
+      const r = fw0.apply(this, arguments);
+      if(r && !was && fishFrac(id, book.kg[id]) >= 0.75) setTimeout(() => showToast(`A whopper! ${ITEMS[id] ? ITEMS[id].name : 'It'} gets a gold edge in your Collection Book.`), 1600);
+      return r; }; }
+  { const st = document.createElement('style');
+    st.textContent = `.bkSlot.shine{ border-color:#e8b93a; background:linear-gradient(135deg, rgba(70,52,12,.55), rgba(10,12,18,.45) 55%, rgba(70,52,12,.45));
+        box-shadow: inset 0 0 0 1px rgba(255,236,160,.35), 0 0 6px rgba(243,201,74,.35); animation: bkShine 2.8s ease-in-out infinite; }
+      @keyframes bkShine{ 0%, 100%{ box-shadow: inset 0 0 0 1px rgba(255,236,160,.3), 0 0 4px rgba(243,201,74,.25); } 50%{ box-shadow: inset 0 0 0 1px rgba(255,246,200,.6), 0 0 9px rgba(243,201,74,.55); } }
+      .bkHead .bkStamp{ font-size:13px; color:#3a2410; background:#e9c66a; border:1px solid #8a6420; border-radius:3px; padding:0 6px; margin-left:8px; transform:rotate(-4deg); display:inline-block; }`;
+    document.head.appendChild(st); }
+  { const rb0 = renderBook;
+    renderBook = function(){
+      rb0.apply(this, arguments);
+      const V = document.getElementById('bookView'); if(!V) return;
+      const pg = bookPage(bookTab); if(!pg) return;
+      const slots = V.querySelectorAll('.bkGrid .bkSlot'), L = pg.items();
+      L.forEach((id, i) => { const el = slots[i]; if(el && bookHas(pg, id) && bookShiny(pg, id)) el.classList.add('shine'); });
+      const head = V.querySelector('.bkHead span'); if(head && book.half.includes(pg.id) && !book.done.includes(pg.id)){ const s = document.createElement('span'); s.className = 'bkStamp'; s.textContent = 'Halfway'; head.appendChild(s); }
+      const rw = V.querySelector('.bkReward span');
+      if(rw && !book.done.includes(pg.id) && !book.half.includes(pg.id) && L.length > 1) rw.textContent += ` Halfway: a stamp and ${formatMoney(bookHalfPay(pg))}.`;
+      if(BOOK_PAGES.every(p => book.done.includes(p.id))){ const all = document.createElement('div'); all.className = 'bkReward got'; all.appendChild(itemIconCanvas('henk_journal', 26));
+        const t = document.createElement('span'); t.textContent = 'Every page! Title "The Collector" and a golden book in your cabinet.'; all.appendChild(t); V.appendChild(all); }
+    }; }
+  bookCheckPages();
+  // ---------- little surprises on the road (answers_m8: rarely, about once in 20 minutes of play; on the roads between the
+  // villages only; ignore one and after a minute it is gone) ----------
+  // Kurt's sausages roll off, one of Grandma's hens on the road, Lorenzo sings about you, Grubb's road tax, Barnaby's golden
+  // carp, a letter of Olle's blowing along the road, and Zafir's nephew with one of the new camels and a few rare things.
+  const SURP_KEY = 'open_world_surprise';
+  let surp = { play: 0, next: 0, last: '', letter: null, boostUntil: 0, carpUntil: 0, carpSeen: 0 };
+  try{ Object.assign(surp, JSON.parse(localStorage.getItem(SURP_KEY)) || {}); }catch(e){}
+  const saveSurp = () => { try{ localStorage.setItem(SURP_KEY, JSON.stringify(surp)); }catch(e){} };
+  const SURP_GAP = () => (15 + Math.random() * 10) * 60000;
+  if(!surp.next){ surp.next = surp.play + SURP_GAP(); saveSurp(); }
+  const SURP_LIFE = 60000;
+  let sv = null;
+  const svName = p => NPC_DISPLAY_NAME[p] || (TOWN[p] && TOWN[p].name) || '';
+  const svSay = (p, text, extra) => say(svName(p), p, text, extra);
+  const svBusy = () => dialogueActive || popupOpen || battleActive || cutsceneLocked || station || fishing || chopping || mining || pocket || shopOpen
+    || menuIsOpen() || tpFx || doorFx || (typeof tut !== 'undefined' && tut) || !introSeen;
+  // the roads: the meadow, the woods, the pass below Rimewick, the top of the desert - and on or by a path there
+  function onRoad(){
+    const s = currentScene.id, r = player.y / TILE, c = player.x / TILE;
+    const area = s === 'outdoor' || s === 'misty_forest' || (s === 'frostpeak' && r >= 66) || (s === N12_SC && r < 40);
+    if(!area) return false;
+    for(let dr = -2; dr <= 2; dr++) for(let dc = -2; dc <= 2; dc++){ const t = tileAt(Math.floor(c) + dc, Math.floor(r) + dr); if(t === T.PATH || t === T.COBBLE) return true; }
+    return false;
+  }
+  // a free spot a few tiles ahead of you (on the path if it can), in view
+  function svSpot(minT, maxT, path){
+    const ux = { left: -1, right: 1 }[player.dir] || 0, uy = { up: -1, down: 1 }[player.dir] || 0, out = [];
+    for(let r = Math.floor(player.y / TILE) - maxT; r <= player.y / TILE + maxT; r++) for(let c = Math.floor(player.x / TILE) - maxT; c <= player.x / TILE + maxT; c++){
+      const x = (c + 0.5) * TILE, y = (r + 0.5) * TILE, d = Math.hypot(x - player.x, y - player.y) / TILE;
+      if(d < minT || d > maxT || !canStandAt(x, y)) continue;
+      const z = zoomNowGlobal || worldZoom || 1, sx = x - lastCamX, sy = y - lastCamY; if(sx < 30 || sx > viewW / z - 30 || sy < 60 || sy > viewH / z - 20) continue;
+      const onP = tileAt(c, r) === T.PATH || tileAt(c, r) === T.COBBLE; if(path && !onP) continue;
+      const ahead = ((x - player.x) * ux + (y - player.y) * uy) / (d * TILE);
+      out.push({ x, y, score: ahead + (onP ? 0.3 : 0) + Math.random() * 0.4 });
+    }
+    out.sort((a, b) => b.score - a.score); return out[0] || null;
+  }
+  function svNpc(prefix, at){
+    const n = makeNpc(prefix, 0, 0, 0.95, 40, ['(busy)'], null, svName(prefix)); n.x = at.x; n.y = at.y; n.scripted = true; n.noQuestMark = true; n.svTemp = true; n.nextShout = 1e15; n.nextBark = 1e15;
+    n.lines = [TOWN[prefix] && TOWN[prefix].lines ? TOWN[prefix].lines[0] : '...'];
+    currentScene.npcs.push(n); return n;
+  }
+  function svDrop(n){ for(const sc of Object.values(SCENES)){ const i = sc.npcs.indexOf(n); if(i >= 0) sc.npcs.splice(i, 1); } }
+  // someone walks off and is gone
+  function svLeave(n){
+    if(!n) return;
+    const a = Math.random() * Math.PI * 2, x = n.x + Math.cos(a) * 9 * TILE, y = n.y + Math.sin(a) * 5 * TILE;
+    npcWalkTo(n, x, y, 50).then(() => svDrop(n)); setTimeout(() => svDrop(n), 7000);
+  }
+  function svEnd(){
+    const e = sv; sv = null; if(!e) return;
+    for(const n of e.npcs || []) svLeave(n);
+    surp.next = surp.play + SURP_GAP(); saveSurp();
+  }
+  const svNear = (o, r) => o && Math.hypot(player.x - o.x, player.y - o.y) < r;
+  const metAny = p => talkedTo.has(p) || bwMet.has(p);
+  const doneQuests = () => Object.keys(QUEST_INFO).filter(k => quests[k] && quests[k].state === 'done' && !/^task_|^board/.test(k));
+
+  // ---- the surprises ----
+  const SV = {};
+  // Kurt's sausages: catch five, keep one
+  SV.kurt = { ok: () => ['outdoor', 'misty_forest'].includes(currentScene.id) && metAny('npc_kurt') && !!ITEMS.sausage,
+    start(){
+      const at = svSpot(3, 6, true); if(!at) return null;
+      const n = svNpc('npc_kurt', at), items = [];
+      for(let k = 0; k < 40 && items.length < 5; k++){ const a = Math.random() * Math.PI * 2, r = (1 + Math.random() * 2) * TILE, x = at.x + Math.cos(a) * r, y = at.y + Math.sin(a) * r * 0.7;
+        if(canStandAt(x, y)) items.push({ x, y, got: false, ph: Math.random() * 6 }); }
+      if(items.length < 5) { svDrop(n); return null; }
+      return { npcs: [n], n, items };
+    },
+    near(e){ return svNear(e.n, 90) || e.items.some(s => svNear(s, 80)); },
+    meet(e){ startCutscene([narrate("Kurt's cart has lost a wheel. Sausages everywhere."), svSay('npc_kurt', "My sausages! Catch them! Not with your mouth!")]); e.until = clockNow + 90000; },
+    frame(e, dt){
+      if(!e.met) return;
+      for(const s of e.items){ if(s.got) continue;
+        const dx = s.x - player.x, dy = s.y - player.y, d = Math.hypot(dx, dy);
+        if(d < 18){ s.got = true; showToast(`Caught one! (${e.items.filter(q => q.got).length}/5)`); continue; }
+        if(d < 64){ const sp = 62 * dt; let nx = s.x + dx / d * sp, ny = s.y + dy / d * sp;
+          if(!canStandAt(nx, ny)){ nx = s.x - dy / d * sp; ny = s.y + dx / d * sp; if(!canStandAt(nx, ny)){ nx = s.x; ny = s.y; } }
+          s.x = nx; s.y = ny; } }
+      if(e.items.every(s => s.got)){ e.done = true; grantItem('sausage', 1);
+        startCutscene([svSay('npc_kurt', "All five! You can keep one. That one. The one that rolled through the mud."),
+          { popup: { kind: 'got', title: "Kurt's sausage", rows: [{ item: 'sausage', text: '+1 Sausage' }] } }], () => svEnd()); }
+      else if(clockNow > e.until && !svBusy()){ e.done = true; startCutscene([svSay('npc_kurt', "Never mind. The birds can have them. Lucky birds.")], () => svEnd()); }
+    },
+    draw(e, camX, camY){ const m = MANIFEST[ITEMS.sausage.icon]; if(!m) return;
+      for(const s of e.items){ if(s.got) continue; const b = Math.abs(Math.sin(clockNow / 160 + s.ph)) * 5;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(s.x - camX, s.y - camY + 2, 7, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        drawSprite(ITEMS.sausage.icon, Math.round(s.x - camX - 9), Math.round(s.y - camY - 16 - b), 18, 18); } } };
+
+  // one of Grandma's hens on the road to the woods: walk her back to Grandma, slowly
+  SV.kip = { ok: () => currentScene.id === 'outdoor' && !!MANIFEST.farm_chicken_down_w0 && currentScene.npcs.some(n => n.spritePrefix === 'npc_grandma'),
+    start(){
+      const at = svSpot(4, 7, true); if(!at) return null;
+      const W = farmWalker('chicken', at.x, at.y, 0, 0, 18); W.until = 1e15;
+      return { npcs: [], hen: W };
+    },
+    near(e){ return svNear(e.hen, 90); },
+    meet(e){ startCutscene([narrate("A hen stands in the middle of the road. One of Grandma's. She looks lost, and cross about it."),
+      narrate('Walk her back to Grandma. Slowly: hens do not like to be rushed.')]); e.until = clockNow + 180000; },
+    frame(e, dt){
+      const W = e.hen, g = currentScene.npcs.find(n => n.spritePrefix === 'npc_grandma');
+      if(!e.met || !g){ W.moving = false; return; }
+      const dx = W.x - player.x, dy = W.y - player.y, d = Math.hypot(dx, dy);
+      let sp = 0, ux = 0, uy = 0;
+      if(d < 34 && player.moving){ const a = Math.atan2(dy, dx) + (Math.random() - 0.5) * 2.2; sp = 130; ux = Math.cos(a); uy = Math.sin(a); }
+      else if(d < 72){ sp = 46; ux = dx / d; uy = dy / d; }
+      if(sp){ let nx = W.x + ux * sp * dt, ny = W.y + uy * sp * dt;
+        if(!canStandAt(nx, ny)){ nx = W.x + uy * sp * dt; ny = W.y - ux * sp * dt; if(!canStandAt(nx, ny)){ nx = W.x; ny = W.y; } }
+        W.dir = Math.abs(nx - W.x) >= Math.abs(ny - W.y) ? (nx > W.x ? 'right' : 'left') : (ny > W.y ? 'down' : 'up');
+        W.moving = nx !== W.x || ny !== W.y; W.t += dt * 1000; W.x = nx; W.y = ny; }
+      else W.moving = false;
+      if(Math.hypot(W.x - g.x, W.y - g.y) < 2.4 * TILE && !svBusy()){ e.done = true; grantItem('egg', 1);
+        startCutscene([svSay('npc_grandma', "That's Doris. She does this. She thinks she's a goose."),
+          svSay('npc_grandma', 'Here. An egg, still warm. She laid it out of spite.'),
+          { popup: { kind: 'got', title: 'A fresh egg', rows: [{ item: 'egg', text: '+1 Egg' }] } }], () => svEnd()); }
+      else if(clockNow > e.until && !svBusy()){ e.done = true; startCutscene([narrate('Doris has had enough of you and walks home on her own. Hens.')], () => svEnd()); }
+    },
+    draw(e, camX, camY){ farmDraw(e.hen, e.hen.x - camX, e.hen.y - camY); } };
+
+  // Lorenzo sings about you: stay and listen, and for five minutes you learn a little faster
+  SV.lorenzo = { ok: () => metAny('npc_lorenzo') && doneQuests().length > 0,
+    start(){ const at = svSpot(3, 5, false); if(!at) return null; const n = svNpc('npc_lorenzo', at); n.dir = 'down'; return { npcs: [n], n }; },
+    near(e){ return svNear(e.n, 110); },
+    meet(e){
+      const qs = doneQuests(), t = QUEST_INFO[qs[Math.floor(Math.random() * qs.length)]].title;
+      const mid = pets.owned.balthazar ? ["A hero came from far away, and also smelled of pig. Rhymes with... no. Nothing rhymes with pig. Wait. Big!"] : [];
+      mid.push('They walked and walked, through mud and rain, and then they walked some more. That verse is honest.', 'Brave of heart and quick of feet, and sometimes not that quick. That line is still a draft.');
+      e.song = [`A song for the hero of "${t}"!`, mid[Math.floor(Math.random() * mid.length)], 'Thank you, thank you. Tips are optional. Applause is not.'];
+      e.line = -1; e.lineAt = 0;
+    },
+    frame(e){
+      if(!e.met || e.done) return;
+      if(!svNear(e.n, 170)){ e.done = true; e.n.say = 'Critics. Everywhere.'; e.n.sayUntil = performance.now() + 2600; setTimeout(svEnd, 2200); return; }
+      if(svBusy()) return;
+      if(clockNow - e.lineAt > 3800){ e.line++; e.lineAt = clockNow;
+        if(e.line >= e.song.length){ e.done = true; surp.boostUntil = Date.now() + 5 * 60000; saveSurp();
+          showToast("Lorenzo's song: you learn a little faster for five minutes (+10% XP)."); svEnd(); return; }
+        e.n.say = e.song[e.line]; e.n.sayUntil = performance.now() + 3700; } } };
+  { const gx0 = gainSkillXp;
+    gainSkillXp = function(amounts){
+      if(surp.boostUntil > Date.now() && amounts && typeof amounts === 'object'){ const a = {}; for(const [k, v] of Object.entries(amounts)) a[k] = typeof v === 'number' ? Math.round(v * 1.1) : v; return gx0.call(this, a); }
+      return gx0.apply(this, arguments); }; }
+
+  // Grubb's road tax: pay, talk your way out, or walk round him (and he follows you a bit, grumbling)
+  SV.grubb = { ok: () => ['outdoor', 'misty_forest'].includes(currentScene.id) && metAny('npc_grubb'),
+    start(){ const at = svSpot(3, 5, true); if(!at) return null; const n = svNpc('npc_grubb', at); n.dir = 'down'; return { npcs: [n], n, bar: { x: at.x, y: at.y + 10 } }; },
+    near(e){ return svNear(e.n, 70); },
+    meet(e){
+      const G = (t, x) => svSay('npc_grubb', t, x), end = () => { e.done = true; };
+      const choices = () => [
+        ...(coins >= 2 ? [{ label: "Here's two copper.", onChoose(){ addCoins(-2); end(); spliceNext(G("Pleasure doing business. Mind the road. It's taxed.")); } }] : []),
+        { label: "I'm on official business.", onChoose(){
+          if(quests.tax && quests.tax.state === 'done'){ end(); spliceNext(G("Official. Hm. You did help with my... audit. Go on, then. This once.")); }
+          else spliceNext(G("Everybody's on official business. It's the most popular business there is. Two copper.", { type: 'choice', choices: choices().filter(c => !/official/.test(c.label)) })); } },
+        { label: "I'll just walk round.", onChoose(){ end(); e.follow = clockNow + 20000; spliceNext(G("Round? ROUND? There's a tax for that too. I'll think of a name.")); } } ];
+      startCutscene([G('Road tax. For the road. Which you are on. Two copper, or a very good reason.', { type: 'choice', choices: choices() })], () => { if(!e.follow) svEnd(); });
+    },
+    frame(e){
+      if(!e.follow) return;
+      if(clockNow > e.follow){ e.follow = 0; svEnd(); return; }
+      const n = e.n, d = Math.hypot(n.x - player.x, n.y - player.y);
+      if(d > 50 && (!n._nextWalk || clockNow > n._nextWalk)){ n._nextWalk = clockNow + 700; npcWalkTo(n, player.x + (n.x < player.x ? -34 : 34), player.y + 6, 70); }
+      if(!n.say && (!e.grumble || clockNow > e.grumble)){ e.grumble = clockNow + 4500;
+        const L = ['Walking-round tax.', 'Detour duty. Very serious.', "I'm writing this down.", 'Half a copper. Per step.']; n.say = L[Math.floor(Math.random() * L.length)]; n.sayUntil = performance.now() + 2600; } },
+    draw(e, camX, camY){
+      if(e.follow || e.done) return;
+      // the barrier: two posts and a striped pole across the road, next to him
+      const x = Math.round(e.bar.x - camX + 14), y = Math.round(e.bar.y - camY);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(x - 2, y + 1, 44, 3);
+      for(const px of [x, x + 38]){ ctx.fillStyle = '#4a3020'; ctx.fillRect(px, y - 16, 4, 17); ctx.fillStyle = '#7a5434'; ctx.fillRect(px + 1, y - 16, 2, 16); }
+      for(let i = 0; i < 38; i++){ ctx.fillStyle = Math.floor(i / 6) % 2 ? '#f2ede0' : '#c8402c'; ctx.fillRect(x + 2 + i, y - 14, 1, 4); }
+      ctx.fillStyle = '#2a1a10'; ctx.fillRect(x + 2, y - 15, 38, 1); ctx.fillRect(x + 2, y - 10, 38, 1); } };
+
+  // Barnaby's news: a golden carp in the hidden pond, for the next fifteen minutes - catch one and he pays its price again
+  SV.barnaby = { ok: () => ['outdoor', 'misty_forest'].includes(currentScene.id) && metAny('npc_barnaby') && fishLv() >= 13,
+    start(){ const at = svSpot(3, 5, false); if(!at) return null; const n = svNpc('npc_barnaby', at); n.dir = 'down'; return { npcs: [n], n }; },
+    near(e){ return svNear(e.n, 110); },
+    meet(e){ e.done = true;
+      startCutscene([svSay('npc_barnaby', 'HEAR YE! A GOLDEN CARP! In the hidden pond in the old woods! For the next fifteen minutes! Probably! HEAR YE!'),
+        narrate('Catch a golden carp in the next fifteen minutes, and Barnaby pays you its price a second time.')],
+        () => { surp.carpUntil = Date.now() + 15 * 60000; surp.carpSeen = inventory.golden_carp || 0; saveSurp(); svEnd(); }); } };
+  const CARP_PRICE = 25;
+
+  // a letter of Olle's blowing along the road: pick it up and take it to whoever it is for
+  ITEMS.road_letter = { name: "Olle's Letter", icon: (ITEMS.henk_letter && ITEMS.henk_letter.icon) || 'henk_page',
+    get desc(){ return surp.letter ? `For ${surp.letter.name}. Olle's handwriting. Take it to them` : 'A letter. Nobody is waiting for it any more'; } };
+  const LETTER_TO = {
+    npc_rosie: ["From my sister. She wants the cake recipe. She is never getting the cake recipe.", "Don't tell anyone, but Grubb pays his taxes late. Every year."],
+    npc_kurt: ['An order! Forty sausages, for a wedding. I need a bigger cart. And a wheel that stays on.', 'Psst. Lorenzo practises his songs on my cow. She has started to hum.'],
+    npc_ambrose: ['From the bishop. He wants to know where the Holy Toe has been. I will write back. Eventually.', 'The baron sleeps through my sermons. He says it is a compliment.'],
+    npc_hilda: ["From Joren. 'Dear Hilda, my swords are better.' He wrote it four times. In capitals.", 'Sir Cedric asked me for a sword that never misses. I told him to try aiming.'],
+    npc_lorenzo: ['Fan mail! Well. It says "please stop". But they took the time to write.', 'Barnaby once shouted my whole song across the square. Before I had finished writing it.'],
+    npc_barnaby: ['A LETTER! For ME! HEAR YE! ...It is a bill.', "Kurt's cow has started humming. I'm announcing it at noon."],
+    npc_hulda: ["It's about soup. It's always about soup.", 'Bjorn takes three bowls and says "hm" once. That is a review, up here.'],
+    npc_bjorn: ['Hm. From my brother. He says hm too.', 'Astrid sings when she thinks nobody hears. Hm. I hear.'],
+    npc_brenna: ['From a mead lover in the south. She wants a barrel. She can have a cup.', 'Ragna once drank a horn of mead in one go. The horn was not empty when she started.'] };
+  SV.olle = { ok: () => metAny('npc_olle') && !surp.letter && Object.keys(LETTER_TO).some(p => metAny(p)),
+    start(){
+      const at = svSpot(3, 6, true); if(!at) return null;
+      const north = currentScene.id === 'frostpeak', pool = Object.keys(LETTER_TO).filter(p => metAny(p) && ['npc_hulda', 'npc_bjorn', 'npc_brenna'].includes(p) === north);
+      const pick = pool.length ? pool : Object.keys(LETTER_TO).filter(metAny), who = pick[Math.floor(Math.random() * pick.length)]; if(!who) return null;
+      return { npcs: [], l: { x: at.x, y: at.y, vx: (Math.random() < 0.5 ? -1 : 1) * 16, ph: Math.random() * 6 }, to: who };
+    },
+    near(e){ return svNear(e.l, 22); },
+    meet(e){ e.done = true; surp.letter = { to: e.to, name: svName(e.to) }; saveSurp(); grantItem('road_letter', 1);
+      startCutscene([narrate(`A letter blows across the road and wraps itself round your boot. Olle's handwriting: "For ${svName(e.to)}. URGENT. (Not urgent.)"`),
+        { popup: { kind: 'got', title: "Olle's Letter", rows: [{ item: 'road_letter', text: `For ${svName(e.to)}` }, 'Take it to them. Postmen tip. Well. People tip postmen.'] } }], () => svEnd()); },
+    frame(e, dt){ if(e.met) return; const L = e.l, nx = L.x + L.vx * dt; if(canStandAt(nx, L.y)) L.x = nx; else L.vx = -L.vx; },
+    draw(e, camX, camY){ if(e.met) return; const L = e.l;
+      const f = Math.sin(clockNow / 140 + L.ph), y = L.y - camY - 10 - Math.abs(f) * 6;
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(L.x - camX, L.y - camY + 2, 7 - Math.abs(f) * 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(Math.round(L.x - camX), Math.round(y)); ctx.rotate(f * 0.35); ctx.imageSmoothingEnabled = false; ctx.drawImage(ENVELOPE, -8, -6, 16, 12); ctx.restore(); } };
+  // the letter on the road: a small envelope with Olle's red seal
+  const ENVELOPE = (() => {
+    const cv = document.createElement('canvas'); cv.width = 16; cv.height = 12; const g = cv.getContext('2d'), P = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+    for(let y = 0; y < 12; y++) for(let x = 0; x < 16; x++){ const edge = x === 0 || y === 0 || x === 15 || y === 11; P(x, y, edge ? '#5a4632' : y > 7 ? '#e6dcc2' : '#f6efdc'); }
+    for(let x = 1; x < 15; x++){ const y = Math.round(1 + (x < 8 ? x : 15 - x) * 0.75); P(x, y, '#9a8466'); if(y + 1 < 11) P(x, y + 1, '#ded2b4'); }
+    for(const [x, y] of [[7, 6], [8, 6], [7, 7], [8, 7], [6, 7], [9, 7], [7, 8], [8, 8]]) P(x, y, '#b8322a');
+    P(7, 6, '#e0574a'); P(8, 8, '#7e1e18');
+    return cv; })();
+  // handing the letter over
+  { const bp0 = buildNpcDialoguePages;
+    buildNpcDialoguePages = function(npc, speaker){
+      const L = surp.letter;
+      if(!L || !inventory.road_letter || npc.spritePrefix !== L.to || npc.svTemp) return bp0.apply(this, arguments);
+      const S = t => ({ speaker, portrait: npc.spritePrefix, text: t }), lines = LETTER_TO[L.to] || ['A letter? For me? Thank you.'];
+      return [ narrate("You hand over Olle's letter. It is a bit muddy."), S(lines[0]),
+        { popup: { kind: 'got', title: 'A tip', rows: [{ icon: 'coin', text: '+5 copper' }] },
+          onShow(){ if(!surp.letter) return; inventory.road_letter = 0; saveInventory(); surp.letter = null; saveSurp(); addCoins(5); } },
+        ...(Math.random() < 0.5 && lines[1] ? [S(lines[1])] : []) ];
+    }; }
+
+  // Zafir's nephew with one of the new camels: two or three rare things from the desert, for a moment
+  const TRADER_POOL = [['dates', 8], ['cactus_fruit', 6], ['desert_glass', 14], ['gem_opal', 30], ['gem_sapphire', 50], ['gem_ruby', 80], ['mp_potion', 20], ['honeycomb', 10], ['salt', 6]];
+  SHOPS.road_trader = { title: "The Trader's Rugs", keeper: 'road_trader', buy: [], sell: {},
+    quip: { buy: '"A fine choice. My uncle will be furious."', sell: '"I only sell. Selling is my whole thing."', sellNone: '"I only sell. Selling is my whole thing."' } };
+  SV.koopman = { ok: () => !!(visitedScenes && visitedScenes.has(N12_SC)) && !!MANIFEST.cm4_cara_idle,
+    start(){
+      const at = svSpot(3, 5, false); if(!at) return null;
+      const from = { x: at.x + (Math.random() < 0.5 ? -1 : 1) * 6 * TILE, y: at.y };
+      const goods = TRADER_POOL.filter(([k]) => ITEMS[k]).sort(() => Math.random() - 0.5).slice(0, 2 + (Math.random() < 0.5 ? 1 : 0));
+      return { npcs: [], c: { x: from.x, y: from.y, tx: at.x, ty: at.y, dist: 0, moving: true, flip: from.x > at.x }, goods };
+    },
+    near(e){ return !e.c.moving && svNear(e.c, 80); },
+    meet(e){
+      SHOPS.road_trader.buy = e.goods.map(g => g.slice());
+      const T = t => say("Zafir's Nephew", 'camel', t);
+      startCutscene([narrate('A camel blocks the road. Its saddle bags are stuffed with rugs, and a sign hangs off one of them: "OPEN (USUALLY)". A voice comes from behind the camel.'),
+        T('Uncle Zafir sends his regards. And his prices. Today only, all the way from the desert: ' + e.goods.map(([k]) => ITEMS[k].name).join(', ') + '.'),
+        T('Have a look. In a minute I have to be somewhere else. I always have to be somewhere else.')],
+        () => { e.done = true; e.leaveAt = clockNow + 1500; openShop('road_trader'); });
+    },
+    frame(e, dt){
+      const C = e.c;
+      if(e.done && !e.leaving && !shopOpen && clockNow > (e.leaveAt || 0)){ e.leaving = true; C.tx = C.x + (C.flip ? -1 : 1) * 7 * TILE; C.ty = C.y; C.moving = true; }
+      if(!C.moving) return;
+      const dx = C.tx - C.x, dy = C.ty - C.y, d = Math.hypot(dx, dy), s = (e.leaving ? 48 : 34) * dt;
+      if(d <= s){ C.x = C.tx; C.y = C.ty; C.moving = false; if(e.leaving) svEnd(); return; }
+      C.flip = dx < 0; C.x += dx / d * s; C.y += dy / d * s; C.dist += s;
+    },
+    draw(e, camX, camY){ const C = e.c, n = cm4Sprite('cara', 'e', C.moving, C.dist); if(!MANIFEST[n]) return;
+      const X = Math.round(C.x - camX - (C.flip ? CM4.w - CM4.cx : CM4.cx)), Y = Math.round(C.y - camY - CM4.foot);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(C.x - camX, C.y - camY, 20, 5, 0, 0, Math.PI * 2); ctx.fill();
+      if(!C.flip){ drawSprite(n, X, Y, CM4.w, CM4.h); return; }
+      ctx.save(); ctx.translate(X + CM4.w, Y); ctx.scale(-1, 1); drawSprite(n, 0, 0, CM4.w, CM4.h); ctx.restore(); } };
+
+  // ---- the clock, the start, the minute ----
+  function svStart(kind){
+    const K = kind ? [kind] : Object.keys(SV).filter(k => k !== surp.last && (() => { try{ return SV[k].ok(); }catch(e){ return false; } })());
+    if(!K.length) return false;
+    const k = K[Math.floor(Math.random() * K.length)], e = SV[k].start(); if(!e) return false;
+    sv = Object.assign(e, { kind: k, scene: currentScene.id, t0: clockNow, met: false, done: false });
+    surp.last = k; saveSurp(); return true;
+  }
+  let svLastTick = Date.now();
+  setInterval(() => {
+    const now = Date.now(), dt = Math.min(5000, now - svLastTick); svLastTick = now;
+    if(!document.hidden && !menuIsOpen()) surp.play += dt;
+    if(Math.floor(surp.play / 10000) !== Math.floor((surp.play - dt) / 10000)) saveSurp();
+    // Barnaby's carp
+    if(surp.carpUntil){ const n = inventory.golden_carp || 0;
+      if(n > surp.carpSeen && Date.now() < surp.carpUntil){ const got = n - surp.carpSeen; addCoins(CARP_PRICE * got);
+        queuePopup({ kind: 'got', title: "Barnaby's golden carp", rows: [{ item: 'golden_carp', text: `+${formatMoney(CARP_PRICE * got)} from Barnaby: double fish money` }, 'He is already shouting about it.'] }); }
+      surp.carpSeen = n; if(Date.now() > surp.carpUntil){ surp.carpUntil = 0; } saveSurp(); }
+    if(sv){
+      if(currentScene.id !== sv.scene){ for(const n of sv.npcs || []) svDrop(n); sv = null; surp.next = surp.play + SURP_GAP(); saveSurp(); return; }
+      if(!sv.met && !sv.done){
+        if(clockNow - sv.t0 > SURP_LIFE){ svEnd(); return; }
+        if(!svBusy() && SV[sv.kind].near(sv)){ sv.met = true; SV[sv.kind].meet(sv); }
+      }
+      return;
+    }
+    if(surp.play >= surp.next && !svBusy() && onRoad() && !window.__noSurprise){ if(!svStart()) surp.next = surp.play + 30000; }
+  }, 250);
+  window.__surpNow = k => svStart(k);
+  // movement every frame, and drawing among the other sprites (so they stand in front of and behind things properly)
+  let svFrameAt = 0;
+  { const ps0 = pushShowSprites;
+    pushShowSprites = function(sprites, camX, camY){
+      ps0.apply(this, arguments);
+      const e = sv; if(!e || currentScene.id !== e.scene) return;
+      const dt = Math.min(0.1, svFrameAt ? (clockNow - svFrameAt) / 1000 : 0); svFrameAt = clockNow;
+      try{ if(SV[e.kind].frame && !popupOpen && !dialogueActive) SV[e.kind].frame(e, dt); }catch(err){}
+      if(SV[e.kind].draw && sv === e){ const y = (e.c || e.hen || e.l || e.n || player).y;
+        sprites.push({ row: y / TILE + 0.02, draw: () => { try{ SV[e.kind].draw(e, camX, camY); }catch(err){} } }); }
     }; }
 
   requestAnimationFrame(frame);
