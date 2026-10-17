@@ -804,6 +804,11 @@
   #battleActions button{ min-width:0; }
   #battleActions button span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* display:flex above would beat the hidden attribute */
   #battleSpellMenu .spellCost{ font-size:17px; line-height:1; color:#cfe9ff; }
+  #battleSpellMenu:not([hidden]){ flex-wrap:wrap; gap:6px;
+    max-height:min(262px, 38vh); overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; }
+  #battleSpellMenu button{ flex:1 1 96px; min-height:66px; min-width:0; font-size:16px; padding:4px 1px 8px; }
+  #battleSpellMenu button span{ max-width:100%; overflow-wrap:normal; word-break:normal; }
+  #battleSpellMenu .spellBack{ flex:1 1 100%; min-height:46px; flex-direction:row; position:sticky; bottom:0; z-index:1; background-color:var(--slate-deep); }
   /* v129 (user, "Button Ideas" option A): two rows - Attack + Magic on top (icon beside
      the word), Items / your pet / Flee below (icon over the word; the pet a bit wider so
      "Balthazar" fits). The ::after is a zero-height line break; hidden buttons just drop out */
@@ -9109,7 +9114,7 @@
     if(white > 0){ ctx.fillStyle = `rgba(245,250,255,${white})`; ctx.fillRect(0, 0, viewW, viewH); }
     ctx.restore();
   }
-  function playerMaxMp(){ return 6 + skillLevel('magic')*4 + (bwMet.has('blessing_mp') ? 2 : 0); } // + Ambrose's blessing (quest 3)
+  function playerMaxMp(){ return 10 + skillLevel('magic')*2 + (bwMet.has('blessing_mp') ? 2 : 0); } // + Ambrose's blessing (quest 3)
   function fireballDamage(){
     const power = skillLevel('magic')*2 + 1;
     return Math.max(1, Math.round(power + (Math.random()*3-1)));
@@ -9796,7 +9801,7 @@
     spendMp('mend'); battle.castKind = 'holy';
     setBattleLog('You whisper the words Eldrin taught you...'); Sfx.play('spell');
     startMove('player', 'playerCast', () => {
-      const heal = Math.min(battle.playerMaxHpVal - battle.playerHp, spellRoll(8 + spellPower() * 2));
+      const heal = Math.min(battle.playerMaxHpVal - battle.playerHp, spellRoll(8 + spellPower()));
       battle.playerHp += heal;
       addBattleFx({ type: 'mend', actor: 'player', life: 1100 });
       addBattleFx({ type: 'num', actor: 'player', text: `+${heal}`, color: '#8be07a' });
@@ -9849,7 +9854,7 @@
     spendMp('lightning'); battle.castKind = 'storm'; setBattleLog('The sky goes dark...'); Sfx.play('spell');
     battleAfter(150, () => addBattleFx({ type: 'anim', key: 'fx_strike', n: 13, fps: 12, actor: 'enemy', feet: true, ay: 1, dy: 12, scale: 3, life: 1100 }));
     startMove('player', 'playerCast', () => {
-      const dmg = spellRoll(spellPower() * 3.3 + 6);
+      const dmg = spellRoll(spellPower() * 2.5 + 6);
       battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#ffe36a');
       addBattleFx({ type: 'flash', life: 180 }); addBattleFx({ type: 'shake', amp: 8, dur: 260 });
@@ -17065,7 +17070,11 @@
 
   // 1. Grandma's clock: a backwards dial; Henk's pie went at ten past four (= hands at a normal 7:50); pull the rope
   function pzClock(body){
-    const cv = pzCanvas(body, 160, 176, 'width:min(220px,58vw)'), g = cv.getContext('2d');
+    // v164 (playtest: stuck at the clock): next to the clock the dial up close, with big backwards numbers you can read on
+    // a phone; the little hand on the 4 and the big hand on the 2 always counts; Grandma helps after a few wrong pulls
+    const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:center'; body.appendChild(wrap);
+    const cv = pzCanvas(wrap, 160, 176, 'width:min(140px,36vw);margin:0'), g = cv.getContext('2d');
+    const fv = pzCanvas(wrap, 120, 120, 'width:min(176px,46vw);margin:0'), f = fv.getContext('2d');
     const row = pzRow(body, '<button type=button class=uiBtn data-k=hm>&#8634; Hour</button><button type=button class=uiBtn data-k=hp>Hour &#8635;</button><button type=button class=uiBtn data-k=mm>&#8634; Min</button><button type=button class=uiBtn data-k=mp>Min &#8635;</button>');
     const H = { h: 12, m: 0, open: 0, tug: 0, actLabel: 'Pull the rope' }, D = [60, 88, 100, 142], ang = x => -Math.PI / 2 + x * Math.PI * 2;
     row.querySelectorAll('button').forEach(b => onPz(b, () => { if(H.won) return; const k = b.dataset.k;
@@ -17074,10 +17083,15 @@
       if(k === 'mp'){ H.m = (H.m + 5) % 60; if(H.m === 0) H.h = H.h === 12 ? 1 : H.h + 1; } }));
     H.act = () => {
       H.tug = performance.now() + 260;
-      if(H.h === 7 && H.m === 50){ H.open = performance.now(); H.wait = 2200; H.after = () => henkPageFound(1);
-        pzWin('<b>Click.</b> The glass door swings open and the pendulum stops. Behind it: a folded page.'); }
+      // ten past four on this clock = a normal ten to eight; with the hour set first and the minutes turned on after it,
+      // the little hand has crept on towards the 3 (a normal ten to nine): that counts too
+      if(H.m === 50 && (H.h === 7 || H.h === 8)){ H.open = performance.now(); H.wait = 2200; H.after = () => henkPageFound(1);
+        pzWin('<b>Click.</b> The glass door swings open and the pendulum stops. Behind it: a folded page.'); return; }
+      const q = quests.pages || {}, n = q.clockFails = (q.clockFails || 0) + 1; saveQuests();
+      if(n >= 4) pzMsg('Grandma, from the kitchen: "Little hand on the four, big hand on the two. Henk\'s own words."');
+      else if(n >= 2) pzMsg('Grandma, from the kitchen: "The numbers run the other way, dear. Find the four on THIS clock."');
       else if(H.h === 4 && H.m === 10) pzMsg("The clock clunks. Ten past four on a NORMAL clock... but look at the numbers on this one.");
-      else pzMsg(['The clock ticks at you. Rudely.', 'Grandma, from the kitchen: "Stop yanking my clock, dear."', 'Nothing. The pendulum judges you.'][Math.floor(Math.random() * 3)]);
+      else pzMsg(['The clock ticks at you. Rudely.', 'Nothing. The pendulum judges you.'][Math.floor(Math.random() * 2)]);
     };
     onPz(cv, e => { const [x, y] = pzPos(cv, e); if(x >= 106 && x <= 122 && y >= 28 && y <= 104) H.act(); });
     H.draw = now => {
@@ -17095,6 +17109,19 @@
       pzLine(g, 80, 53, 80 + Math.cos(ang(mm)) * 19, 53 + Math.sin(ang(mm)) * 19, '#2a1a10');
       g.fillStyle = '#c8963c'; g.fillRect(79, 52, 3, 3);
       pzDraw(g, 'pz_rope', 112, 30 + (H.tug > now ? 4 : 0)); g.fillStyle = '#24150c'; g.fillRect(111, 29, 7, 3);
+      // the dial up close: wooden rim, cream face, the numbers the wrong way round, the same two hands
+      f.clearRect(0, 0, 120, 120);
+      f.fillStyle = '#4a2c14'; f.beginPath(); f.arc(60, 60, 58, 0, 7); f.fill();
+      f.fillStyle = '#935a2c'; f.beginPath(); f.arc(60, 60, 54, 0, 7); f.fill();
+      f.fillStyle = '#f3e6c4'; f.beginPath(); f.arc(60, 60, 49, 0, 7); f.fill();
+      f.fillStyle = '#d9c597'; for(let i = 0; i < 60; i++){ const a = ang(i / 60), r = i % 5 ? 46 : 44; f.fillRect(Math.round(60 + Math.cos(a) * r) - 1, Math.round(60 + Math.sin(a) * r) - 1, i % 5 ? 1 : 2, i % 5 ? 1 : 2); }
+      f.fillStyle = '#2a1a10'; f.font = "17px 'Jersey 10', monospace"; f.textAlign = 'center'; f.textBaseline = 'middle';
+      for(let n = 1; n <= 12; n++){ const a = ang(((12 - n) % 12) / 12); f.fillText(String(n), 60 + Math.cos(a) * 36, 61 + Math.sin(a) * 36); }
+      f.lineCap = 'round'; f.strokeStyle = '#2a1a10';
+      f.lineWidth = 5; f.beginPath(); f.moveTo(60, 60); f.lineTo(60 + Math.cos(ang(hh)) * 22, 60 + Math.sin(ang(hh)) * 22); f.stroke();
+      f.lineWidth = 3; f.beginPath(); f.moveTo(60, 60); f.lineTo(60 + Math.cos(ang(mm)) * 33, 60 + Math.sin(ang(mm)) * 33); f.stroke();
+      f.fillStyle = '#c8963c'; f.beginPath(); f.arc(60, 60, 4, 0, 7); f.fill();
+      f.textAlign = 'left'; f.textBaseline = 'alphabetic';
     };
     pzMsg("Ten past four, when the pie went. On THIS clock. Set the hands, then pull the rope.");
     return H;
@@ -18840,7 +18867,7 @@
         box.appendChild(r);
       }
       if(knownSpells.some(id => SPELLS[id] && SPELLS[id].tp)){ const n = document.createElement('div'); n.className = 'statHint';
-        n.textContent = `Mana: ${worldMp()}/${playerMaxMp()}. Spells in fights and teleports use the same mana. It grows back by itself, and every fight you win gives a little back. One teleport, then your magic needs two minutes' rest.`; box.appendChild(n); }
+        n.textContent = `Mana: ${worldMp()}/${playerMaxMp()}. Spells in fights and teleports use the same mana. It grows back by itself. One teleport, then your magic needs two minutes' rest.`; box.appendChild(n); }
       const next = Object.values(SPELLS).filter(S => S.lv > skillLevel('magic')).sort((a, b) => a.lv - b.lv)[0];
       if(next){ const n = document.createElement('div'); n.className = 'statHint'; n.textContent = `Next spell: ${next.name} at Magic ${next.lv}.`; box.appendChild(n); }
       statsList.appendChild(box);
@@ -20258,7 +20285,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v163';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v164';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -32736,13 +32763,13 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       setBattleLog(`A sandstorm swallows the ${E.name}! ${dmg} damage, and it can't see a thing for two turns.`); gainSkillXp({ magic: 30 + dmg * 2, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('n27sand', { start: battleClock + 150, dur: 60000 })); };
   PLAYER_ACTIONS.drain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You reach out with your mind...');
-    n8Cast('drain', 'shadow', () => { const dmg = Math.min(battle.enemyHp, spellRoll(spellPower() * 2.15 + 4)); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+    n8Cast('drain', 'shadow', () => { const dmg = Math.min(battle.enemyHp, spellRoll(spellPower() * 1.5 + 4)); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#d05a8a'); addBattleFx({ type: 'anim', key: 'fx_dark2', n: 15, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 8, scale: 2.2, life: 1100 });
       const heal = Math.min(battle.playerMaxHpVal - battle.playerHp, Math.ceil(dmg / 2)); battle.playerHp += heal;
       battleAfter(500, () => { if(!battle) return; addBattleFx({ type: 'mend', actor: 'player', life: 900 }); addBattleFx({ type: 'num', actor: 'player', text: `+${heal}`, color: '#8be07a' }); });
       setBattleLog(`You drain the ${E.name}: ${dmg} damage, and ${heal} HP flows back to you.`); gainSkillXp({ magic: 18 + dmg * 2, hitpoints: dmg * 1.33 }); }, onDone); };
   PLAYER_ACTIONS.chain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('The sky goes dark. Darker than that...');
-    const total = spellRoll(spellPower() * 4.35 + 8), parts = [Math.ceil(total * 0.45), Math.ceil(total * 0.33)]; parts.push(Math.max(1, total - parts[0] - parts[1]));
+    const total = spellRoll(spellPower() * 3.3 + 8), parts = [Math.ceil(total * 0.45), Math.ceil(total * 0.33)]; parts.push(Math.max(1, total - parts[0] - parts[1]));
     n8Cast('chain', 'storm', () => {
       parts.forEach((d, i) => battleAfter(i * 260, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - d); landHit('enemy', d, '#ffe36a');
         addBattleFx({ type: 'anim', key: 'fx_strike', n: 13, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 12, dx: (i - 1) * 14, scale: 2.6 + i * 0.2, life: 900 });
@@ -34395,7 +34422,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       const left = battle && typeof battle.playerMp === 'number' ? battle.playerMp : null;
       const r = eb0.apply(this, arguments);
       if(left !== null){
-        tpState.spent = Math.max(0, playerMaxMp() - left - (outcome === 'victory' ? Math.round(playerMaxMp() * 0.1) : 0)); tpState.at = Date.now();
+        tpState.spent = Math.max(0, playerMaxMp() - left - 0); tpState.at = Date.now();
         try{ localStorage.setItem(TP_KEY, JSON.stringify(tpState)); }catch(e){}
       }
       return r; }; }
@@ -34993,6 +35020,49 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       mapLayersSync(); };
     for(const [im, u] of todo){ im.onload = done; im.onerror = done; im.src = u; }
   })();
+
+  // ---------- v164 battle lists, Grandma about Henk, the clock (scratchpad n32)
+  // playtest (brother): the quest says "Grandma knows", but after her first talk you couldn't ask her about Henk again.
+  // While the clock is the next step, her own question at the end of a talk has it as an answer
+  { const _gp = grandmaPages; grandmaPages = function(speaker, npc){
+      const pages = _gp.apply(this, arguments);
+      try{ const last = pages[pages.length - 1];
+        if(henkStep() === 'clock' && last && last.type === 'choice' && last.choices && last.choices.some(c => /^Just visiting/.test(c.label))){
+          const G = text => ({ speaker, portrait: 'npc_grandma', text });
+          last.choices.splice(last.choices.length - 1, 0, { label: 'About Henk...', onChoose(){ spliceNext(
+            G("Henk fixed my clock before he left. It's run backwards ever since."),
+            G("He left at ten past four, the day the pie went. He cried. Over a pie!"),
+            G("The clock's in my house, dear. Ten past four on THAT clock, mind. And pull the rope. It bites.")); } }); } }catch(e){}
+      return pages; }; }
+  // the user: magic too strong (C). Spells that do damage can miss now, like a swing of the sword: the same odds, with your
+  // Magic level instead of Attack. Fireball stays the one that never misses. A miss still costs the mana
+  const SPELL_CAN_MISS = ['frostbolt', 'lightning', 'spark', 'gust', 'missile', 'sandstorm', 'drain', 'chain', 'dragonbreath'];
+  for(const id of SPELL_CAN_MISS){
+    const a0 = PLAYER_ACTIONS[id]; if(!a0 || !SPELLS[id]) continue;
+    PLAYER_ACTIONS[id] = function(onDone){
+      const def = ENEMIES[battle.enemyId];
+      const aim = skillLevel('magic') + (typeof seaSpellBonus === 'function' ? seaSpellBonus() : 0);
+      if(window.__spellAlwaysHit || Math.random() < hitChance(aim, def.dexterity) + playerLuck()) return a0.apply(this, arguments);
+      spendMp(id); battle.castKind = 'holy'; Sfx.play('spell');
+      setBattleLog(`You cast ${SPELLS[id].name}...`);
+      startMove('player', 'playerCast', () => {
+        landMiss('enemy');
+        setBattleLog(`Your ${SPELLS[id].name} misses the ${def.name}!`);
+        gainSkillXp({ magic: 4 });
+      }, () => battleAfter(260, onDone));
+    };
+  }
+  // playtest (a friend on Android): the Menu button fell off the bottom of the screen. Something of the phone's own
+  // (its navigation bar, a browser or app bar) lies over the bottom there, so on Android the controls sit a bit higher
+  const ANDROID_LIFT = 44;
+  if(/Android/i.test(navigator.userAgent || '')){
+    const st = document.createElement('style');
+    st.textContent = `#wrap.android #controlBar{ padding-bottom:${14 + ANDROID_LIFT}px; }
+  #wrap.android.menuMode #menuDock{ padding-bottom:${14 + ANDROID_LIFT}px; }`;
+    document.head.appendChild(st);
+    document.getElementById('wrap').classList.add('android');
+    try{ updateMenuDock(); }catch(e){}
+  }
 
   requestAnimationFrame(frame);
 
