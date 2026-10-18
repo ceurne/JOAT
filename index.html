@@ -4838,6 +4838,7 @@
   var SAVE_POS_KEY = 'open_world_save_pos';
   function savePosition(){
     if(!introSeen || cutsceneLocked || battleActive || dialogueActive) return false;
+    try{ if(!playerGender || (document.getElementById('genderPick') && !document.getElementById('genderPick').hidden)) return false; }catch(e){ return false; }
     try{ localStorage.setItem(SAVE_POS_KEY, JSON.stringify({ scene: currentScene.id, x: Math.round(player.x), y: Math.round(player.y), dir: player.dir, t: Date.now() })); }catch(e){ return false; }
     return true;
   }
@@ -20285,7 +20286,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v164';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v165';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -20594,7 +20595,7 @@
       // 1 Oct (user: thin black lines flickering through the picture on the iPhone): the pieces met halfway
       // a screen pixel and the dark fill showed through the seam - now every edge lands on a whole screen pixel
       const s = zoomNow * dpr, snap = v => Math.round(v * s) / s;
-      for(let j=0; j<k.rows; j++) for(let i=0; i<k.cols; i++){
+      if(!chunkCacheDraw(k, camX, camY, s)) for(let j=0; j<k.rows; j++) for(let i=0; i<k.cols; i++){
         const x = i*k.cw - camX, y = j*k.ch - camY;
         if(x > viewW || y > viewH || x + k.cw < 0 || y + k.ch < 0) continue;
         const x0 = snap(x), y0 = snap(y);
@@ -24289,15 +24290,16 @@
     for(const id in MAP_SKETCH_MORE){ if(!mapAreas.has(id)) continue; for(const [ax, ay, aw, ah] of MAP_SKETCH_MORE[id]){
       const x0 = Math.max(x, ax), y0 = Math.max(y, ay), x1 = Math.min(x + w, ax + aw), y1 = Math.min(y + h, ay + ah);
       if(x1 > x0 && y1 > y0) g.drawImage(mapSketch, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0); } }
-    if(!mapCol){ mapCol = document.createElement('canvas'); mapCol.width = MG.W; mapCol.height = MG.H; }
-    const cg = mapCol.getContext('2d');
+    if(!mapCol){ mapCol = document.createElement('canvas'); mapCol.width = 8; mapCol.height = 8; }
+    if(mapCol.width < w || mapCol.height < h){ mapCol.width = Math.max(mapCol.width, w); mapCol.height = Math.max(mapCol.height, h); }
+    const cg = mapCol.getContext('2d'); cg.setTransform(1, 0, 0, 1, -x, -y);
     cg.globalCompositeOperation = 'source-over'; cg.clearRect(x, y, w, h); cg.drawImage(mapImg, x, y, w, h, x, y, w, h);
     cg.globalCompositeOperation = 'destination-in'; cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
     cg.save(); cg.beginPath(); cg.rect(x, y, w, h); cg.clip();
     const sx0 = Math.max(0, fx - 1), sy0 = Math.max(0, fy - 1), sx1 = Math.min(FOG_W, fx + fw + 1), sy1 = Math.min(FOG_H, fy + fh + 1);
     cg.drawImage(mapFogCv, sx0, sy0, sx1 - sx0, sy1 - sy0, sx0 * MG.S, sy0 * MG.S, (sx1 - sx0) * MG.S, (sy1 - sy0) * MG.S); cg.restore();
-    cg.globalCompositeOperation = 'source-over';
-    g.drawImage(mapCol, x, y, w, h, x, y, w, h);
+    cg.globalCompositeOperation = 'source-over'; cg.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(mapCol, 0, 0, w, h, x, y, w, h);
   }
   function mapCompose(){
     mapLayersSync();
@@ -24307,7 +24309,7 @@
       for(let i = 0; i < mapFog.length; i++) if(mapFog[i]) im.data[i * 4 + 3] = 255;
       fg.putImageData(im, 0, 0); }
     if(!mapComp){ mapComp = document.createElement('canvas'); mapComp.width = MG.W; mapComp.height = MG.H; mapDirty = true; }
-    if(mapDirty){ mapDirty = false; mapRects = []; mapPaint(0, 0, FOG_W, FOG_H); }
+    if(mapDirty){ mapDirty = false; mapRects = []; for(let fy = 0; fy < FOG_H; fy += 64) mapPaint(0, fy, FOG_W, 64); }
     else if(mapRects.length){ const R = mapRects; mapRects = []; for(const r of R) mapPaint(...r); }
     return mapComp;
   }
@@ -35062,6 +35064,78 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     document.head.appendChild(st);
     document.getElementById('wrap').classList.add('android');
     try{ updateMenuDock(); }catch(e){}
+  }
+
+  // ---------- v165 smoother painted areas (scratchpad n33)
+  // playtest (brother, phone): Frostpeak stutters. The painted ground of Frostpeak and the Fenmire comes in big pieces
+  // from the atlas pages; drawing six of them every frame was the heaviest part of a frame there. Now the pieces round
+  // the camera are put together once into one picture (half a screen spare on every side), and each frame copies from
+  // that. Walk past the spare edge and it is made again. window.__noChunkCache = true draws the old way (tests).
+  const CHUNK_CACHE = { c: null, key: '', x0: 0, y0: 0, w: 0, h: 0, builds: 0 };
+  function chunkCacheDraw(k, camX, camY, s){
+    if(window.__noChunkCache || !k || !(s > 0)) return false;
+    const C = CHUNK_CACHE, vw = viewW, vh = viewH, key = currentScene.id + '|' + k.prefix + '|' + s.toFixed(4) + '|' + Math.round(vw) + 'x' + Math.round(vh);
+    const fits = C.c && C.key === key && camX >= C.x0 && camY >= C.y0 && camX + vw <= C.x0 + C.w && camY + vh <= C.y0 + C.h;
+    if(!fits){
+      const mx = Math.ceil(vw * 0.5), my = Math.ceil(vh * 0.5), x0 = Math.floor(camX - mx), y0 = Math.floor(camY - my);
+      const w = Math.ceil(vw) + 2 * mx, h = Math.ceil(vh) + 2 * my, W = Math.ceil(w * s), H = Math.ceil(h * s);
+      if(W * H > 20e6) return false;
+      if(!C.c) C.c = document.createElement('canvas');
+      if(C.c.width !== W || C.c.height !== H){ C.c.width = W; C.c.height = H; }
+      const g = C.c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+      g.fillStyle = '#0c0a0e'; g.fillRect(0, 0, W, H);
+      for(let j = 0; j < k.rows; j++) for(let i = 0; i < k.cols; i++){
+        const cx = i * k.cw, cy = j * k.ch;
+        if(cx > x0 + w || cy > y0 + h || cx + k.cw < x0 || cy + k.ch < y0) continue;
+        const r = MANIFEST[`${k.prefix}_${i}_${j}`]; if(!r) continue;
+        const [src, sx, sy] = atlas(r[0], r[1], r[2], r[3]);
+        // every edge on a whole pixel, so the pieces meet without a seam (as the old way did)
+        const dx0 = Math.round((cx - x0) * s), dy0 = Math.round((cy - y0) * s), dx1 = Math.round((cx + k.cw - x0) * s), dy1 = Math.round((cy + k.ch - y0) * s);
+        g.drawImage(src, sx, sy, r[2], r[3], dx0, dy0, dx1 - dx0, dy1 - dy0);
+      }
+      Object.assign(C, { key, x0, y0, w, h }); C.builds++;
+    }
+    const sx = Math.round((camX - C.x0) * s), sy = Math.round((camY - C.y0) * s);
+    ctx.drawImage(C.c, sx, sy, Math.round(vw * s), Math.round(vh * s), 0, 0, Math.round(vw * s) / s, Math.round(vh * s) / s);
+    return true;
+  }
+  // playtest (brother, phone): Frostpeak stutters. Each frame there drew from 5 to 7 of the big atlas pages (1400 x 4096
+  // each), Puddlebottom from 3; a phone has to keep all those huge pictures ready at once. Now every sprite that is
+  // drawn is cut out of its page once into a picture of its own size, and drawn from that after. Big pieces (over
+  // 512 px) still come from the page; the cut-outs are thrown away and made again if they ever pass 12 million pixels.
+  // window.__noSpriteCut = true draws straight from the pages (tests).
+  const SPRITE_CUTS = new Map(); let spriteCutPx = 0, spriteCutPages = null;
+  { const atlas0 = atlas;
+    atlas = function(sx, sy, sw, sh){
+      const a = atlas0(sx, sy, sw, sh);
+      if(window.__noSpriteCut || !atlasPages) return a;
+      const src = a[0];
+      if(!spriteCutPages || spriteCutPages.size !== atlasPages.length) spriteCutPages = new Set(atlasPages);
+      if(!spriteCutPages.has(src) || sw > 512 || sh > 512 || sw < 1 || sh < 1 || sw % 1 || sh % 1 || a[1] % 1 || a[2] % 1) return a;
+      if(src.complete === false || src.width === 0) return a;
+      const k = sx + ',' + sy + ',' + sw + ',' + sh;
+      let c = SPRITE_CUTS.get(k);
+      if(!c){
+        if(spriteCutPx + sw * sh > 12e6){ SPRITE_CUTS.clear(); spriteCutPx = 0; }
+        c = document.createElement('canvas'); c.width = sw; c.height = sh;
+        c.getContext('2d').drawImage(src, a[1], a[2], sw, sh, 0, 0, sw, sh);
+        SPRITE_CUTS.set(k, c); spriteCutPx += sw * sh;
+      }
+      return [c, 0, 0];
+    }; }
+  // playtest (brother): "no exciting fight yet". At the level an area is meant for, an enemy fell in one or two hits and
+  // hardly scratched you (bot: 1.6 turns a fight, 97% of your health left). Enemies get more health and hit harder, per
+  // area (bot-tuned: the Crack was already tougher, so it gets less); the two little ones in Wetsock Woods (your very
+  // first fights) stay as they were. [health x, strength x]
+  const ENEMY_BUFF = {
+    snapjaw_lily: [2.5, 1.6], mud_worm: [2.5, 1.6], bog_troll: [2.5, 1.6],
+    snow_wolf: [2.5, 1.5], frost_wisp: [2.5, 1.5],
+    scorpion: [2.2, 1.4], sand_rat: [2.2, 1.4], drowned_sailor: [2.2, 1.4],
+    crack_goblin: [1.5, 1.15], sunstone_golem: [1.5, 1.15], turquoise_golem: [1.5, 1.15], obsidian_golem: [1.5, 1.15], drain_warden: [1.5, 1.15],
+    broodmother: [1.5, 1.2], mire_dragon: [1.5, 1.2], frost_horror: [1.5, 1.2], ice_golem: [1.5, 1.2], sand_bull: [1.2, 1.1] };
+  for(const id in ENEMY_BUFF){
+    const e = ENEMIES[id], k = ENEMY_BUFF[id]; if(!e || e._buffed || !(e.maxHp > 0)) continue;
+    e.maxHp = Math.round(e.maxHp * k[0]); e.strength = Math.round(e.strength * k[1]); e._buffed = true;
   }
 
   requestAnimationFrame(frame);
