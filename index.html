@@ -20286,7 +20286,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v165';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v166';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -35138,6 +35138,31 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     e.maxHp = Math.round(e.maxHp * k[0]); e.strength = Math.round(e.strength * k[1]); e._buffed = true;
   }
 
+  // ---------- v166 enemies grow with you (scratchpad n34)
+  // the user (for the brother, who plays magic far above the areas he fights in): enemies and bosses grow with you.
+  // For every level your best fighting level (Magic, or Attack and Strength together) is past the level an enemy is
+  // meant for, it has 5% more health and hits 5% harder; at most +50%. Bosses: up to +40% health but only half as
+  // much harder hitting (bot: with full extra damage a boss 15 levels below you still won). At the right level a fight
+  // is as it was. window.__noLvScale = true turns it off (tests).
+  const ENEMY_LV = { hollow_wraith: 3, drifting_husk: 5,
+    snapjaw_lily: 18, mud_worm: 18, bog_troll: 18, snow_wolf: 24, frost_wisp: 24, scorpion: 30, sand_rat: 30, drowned_sailor: 30,
+    crack_goblin: 40, sunstone_golem: 40, turquoise_golem: 40, obsidian_golem: 40, drain_warden: 40,
+    broodmother: 9, mire_dragon: 16, ice_golem: 20, frost_horror: 21, sand_bull: 40 };
+  const fightLevel = () => Math.max((skillLevel('attack') + skillLevel('strength')) / 2, skillLevel('magic'));
+  function enemyLvScale(id){
+    const lv = ENEMY_LV[id], def = ENEMIES[id]; if(window.__noLvScale || !lv || !def) return 1;
+    const over = fightLevel() - lv; if(over <= 0) return 1;
+    return 1 + Math.min(def.boss ? 0.4 : 0.5, 0.05 * over);
+  }
+  { const sb0 = startBattle;
+    startBattle = function(enemyId){
+      const r = sb0.apply(this, arguments);
+      try{ if(battle && battle.enemyId === enemyId){ const k = enemyLvScale(enemyId); battle.lvScale = k; battle.lvHit = ENEMIES[enemyId].boss ? 1 + (k - 1) / 2 : k;
+        if(k > 1){ battle.enemyMaxHp = Math.round(battle.enemyMaxHp * k); battle.enemyHp = Math.round(battle.enemyHp * k); } } }catch(e){}
+      return r; }; }
+  { const ep0 = enemyPower;
+    enemyPower = function(def){ const p = ep0.apply(this, arguments);
+      return battle && battle.lvHit > 1 && def === ENEMIES[battle.enemyId] ? p * battle.lvHit : p; }; }
   requestAnimationFrame(frame);
 
   // ---------- HOT RELOAD (state is just player position; nice-to-have) ----------
