@@ -9792,7 +9792,7 @@
       landHit('enemy', dmg, '#ff9a3c');
       addBattleFx({ type:'burst', actor:'enemy', color:'fire' });
       setBattleLog(`The Fireball scorches the ${def.name} for ${dmg} damage!`);
-      gainSkillXp({ magic: 11 + dmg*2, hitpoints: dmg*1.33 }); taskCount('fireball'); taskCount('fireball_' + currentScene.id);
+      gainSkillXp({ magic: 11 + dmg*1.5, hitpoints: dmg*1.33 }); taskCount('fireball'); taskCount('fireball_' + currentScene.id);
     }, () => battleAfter(260, onDone));
   }
   const PLAYER_ACTIONS = { attack: playerAttack, fireball: castFireball, mend: castMend, frostbolt: castFrostBolt, stoneskin: castStoneSkin, sleep: castSleep, lightning: castLightning };
@@ -9827,7 +9827,7 @@
         addBattleFx({ type: 'anim', key: 'fx_ice2_end', n: 18, fps: 30, actor: 'enemy', feet: true, ay: 1, dy: 8, scale: 2.8, start: now0 + 1150, life: 620 });
         setBattleLog(`The Frost Bolt hits the ${def.name} for ${dmg} damage!`);
       }
-      gainSkillXp({ magic: 13 + dmg * 2, hitpoints: dmg * 1.33 });
+      gainSkillXp({ magic: 13 + dmg * 1.5, hitpoints: dmg * 1.33 });
     }, () => battleAfter(260, onDone));
   }
   function castStoneSkin(onDone){
@@ -9860,7 +9860,7 @@
       landHit('enemy', dmg, '#ffe36a');
       addBattleFx({ type: 'flash', life: 180 }); addBattleFx({ type: 'shake', amp: 8, dur: 260 });
       setBattleLog(`Lightning strikes the ${def.name} for ${dmg} damage!`);
-      gainSkillXp({ magic: 16 + dmg * 2, hitpoints: dmg * 1.33 });
+      gainSkillXp({ magic: 16 + dmg * 1.5, hitpoints: dmg * 1.33 });
     }, () => battleAfter(300, onDone));
   }
   function useBattleItem(id, onDone){
@@ -19113,7 +19113,7 @@
     startMove('player', 'playerFireball', () => {
       const dmg = Math.round(fireballDamage() * 1.35 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#ff7a2c'); addBattleFx({ type: 'burst', actor: 'enemy', color: 'fire' });
-      setBattleLog(`Dragon Breath roars over the ${def.name}: ${dmg} damage!`); gainSkillXp({ magic: 14 + dmg * 2, hitpoints: dmg * 1.33 });
+      setBattleLog(`Dragon Breath roars over the ${def.name}: ${dmg} damage!`); gainSkillXp({ magic: 14 + dmg * 1.5, hitpoints: dmg * 1.33 });
     }, () => battleAfter(260, onDone));
   }
   PLAYER_ACTIONS.dragonbreath = castDragonBreath;
@@ -20286,7 +20286,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v166';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v167';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -26617,20 +26617,20 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   PLAYER_ACTIONS.spark = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You snap your fingers...');
     n8Cast('spark', 'storm', () => { const dmg = spellRoll(spellPower() * 0.55 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#ffe36a'); n8Anim('fx_spark_hit', 'enemy', { scale: 1.8, fps: 16 });
-      setBattleLog(`A spark zaps the ${E.name} for ${dmg} damage!`); gainSkillXp({ magic: 8 + dmg * 2, hitpoints: dmg * 1.33 }); },
+      setBattleLog(`A spark zaps the ${E.name} for ${dmg} damage!`); gainSkillXp({ magic: 8 + dmg * 1.5, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('fx_spark_fly', { start: battleClock + 250, dur: 370, fps: 18, scale: 1.4 })); };
   PLAYER_ACTIONS.gust = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You fill your lungs...');
     n8Cast('gust', 'holy', () => { const dmg = spellRoll(spellPower() * 0.95 + 2); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#e8eef4'); n8Anim('fx_breath', 'enemy', { scale: 2.4, fps: 14, dx: 8 }); addBattleFx({ type: 'react', actor: 'enemy', hit: true });
       if(battle.enemyHp > 0){ battle.n8last = true; addBattleFx({ type: 'num', actor: 'enemy', text: 'Whoosh!', color: '#e8eef4' }); }
-      setBattleLog(`A gust of wind slams into the ${E.name}! ${dmg} damage, and it is blown right back.`); gainSkillXp({ magic: 12 + dmg * 2, hitpoints: dmg * 1.33 }); },
+      setBattleLog(`A gust of wind slams into the ${E.name}! ${dmg} damage, and it is blown right back.`); gainSkillXp({ magic: 12 + dmg * 1.5, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('fx_wind', { start: battleClock + 200, dur: 420, fps: 14, scale: 2 })); };
   PLAYER_ACTIONS.missile = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('Three little lights gather round your hand...');
     const total = spellRoll(spellPower() * 1.75 + 4), parts = [Math.ceil(total / 3), Math.ceil(total / 3), total - 2 * Math.ceil(total / 3)].map(v => Math.max(1, v));
     n8Cast('missile', 'holy', () => {
       parts.forEach((d, i) => battleAfter(i * 170, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - d); landHit('enemy', d, '#fff2b0');
         n8Anim('fx_holyimp', 'enemy', { scale: 1.6, fps: 18, dy: -14 + i * 14 }); }));
-      setBattleLog(`Three Magic Missiles strike the ${E.name}! ${parts.reduce((a, b) => a + b, 0)} damage.`); gainSkillXp({ magic: 16 + total * 2, hitpoints: total * 1.33 }); },
+      setBattleLog(`Three Magic Missiles strike the ${E.name}! ${parts.reduce((a, b) => a + b, 0)} damage.`); gainSkillXp({ magic: 16 + total * 1.5, hitpoints: total * 1.33 }); },
       onDone, () => [0, 170, 340].forEach((d, i) => n8Fly('fx_holyrep', { start: battleClock + 120 + d, dur: 500, fps: 20, scale: 1.6, arc: 26 - i * 13, dy0: -6 + i * 6, dy1: -14 + i * 14 }))); };
   PLAYER_ACTIONS.ward = onDone => { setBattleLog('You draw a mirror of light in the air...');
     n8Cast('ward', 'holy', () => { battle.n8ward = 3; n8Anim('fx_holyimp', 'pet', { scale: 2.2, fps: 12 });
@@ -32762,21 +32762,21 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     n8Cast('sandstorm', 'holy', () => { const dmg = spellRoll(spellPower() * 0.8 + 3); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#e8c890');
       if(battle.enemyHp > 0) battle.n27sand = 2;
-      setBattleLog(`A sandstorm swallows the ${E.name}! ${dmg} damage, and it can't see a thing for two turns.`); gainSkillXp({ magic: 30 + dmg * 2, hitpoints: dmg * 1.33 }); },
+      setBattleLog(`A sandstorm swallows the ${E.name}! ${dmg} damage, and it can't see a thing for two turns.`); gainSkillXp({ magic: 30 + dmg * 1.5, hitpoints: dmg * 1.33 }); },
       onDone, () => n8Fly('n27sand', { start: battleClock + 150, dur: 60000 })); };
   PLAYER_ACTIONS.drain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('You reach out with your mind...');
     n8Cast('drain', 'shadow', () => { const dmg = Math.min(battle.enemyHp, spellRoll(spellPower() * 1.5 + 4)); battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
       landHit('enemy', dmg, '#d05a8a'); addBattleFx({ type: 'anim', key: 'fx_dark2', n: 15, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 8, scale: 2.2, life: 1100 });
       const heal = Math.min(battle.playerMaxHpVal - battle.playerHp, Math.ceil(dmg / 2)); battle.playerHp += heal;
       battleAfter(500, () => { if(!battle) return; addBattleFx({ type: 'mend', actor: 'player', life: 900 }); addBattleFx({ type: 'num', actor: 'player', text: `+${heal}`, color: '#8be07a' }); });
-      setBattleLog(`You drain the ${E.name}: ${dmg} damage, and ${heal} HP flows back to you.`); gainSkillXp({ magic: 18 + dmg * 2, hitpoints: dmg * 1.33 }); }, onDone); };
+      setBattleLog(`You drain the ${E.name}: ${dmg} damage, and ${heal} HP flows back to you.`); gainSkillXp({ magic: 18 + dmg * 1.5, hitpoints: dmg * 1.33 }); }, onDone); };
   PLAYER_ACTIONS.chain = onDone => { const E = ENEMIES[battle.enemyId]; setBattleLog('The sky goes dark. Darker than that...');
     const total = spellRoll(spellPower() * 3.3 + 8), parts = [Math.ceil(total * 0.45), Math.ceil(total * 0.33)]; parts.push(Math.max(1, total - parts[0] - parts[1]));
     n8Cast('chain', 'storm', () => {
       parts.forEach((d, i) => battleAfter(i * 260, () => { if(!battle) return; battle.enemyHp = Math.max(0, battle.enemyHp - d); landHit('enemy', d, '#ffe36a');
         addBattleFx({ type: 'anim', key: 'fx_strike', n: 13, fps: 14, actor: 'enemy', feet: true, ay: 1, dy: 12, dx: (i - 1) * 14, scale: 2.6 + i * 0.2, life: 900 });
         addBattleFx({ type: 'flash', life: 120 }); addBattleFx({ type: 'shake', amp: 6 + i * 2, dur: 200 }); }));
-      setBattleLog(`Chain Lightning! It strikes the ${E.name} three times: ${parts.reduce((a, b) => a + b, 0)} damage.`); gainSkillXp({ magic: 24 + total * 2, hitpoints: total * 1.33 }); }, onDone); };
+      setBattleLog(`Chain Lightning! It strikes the ${E.name} three times: ${parts.reduce((a, b) => a + b, 0)} damage.`); gainSkillXp({ magic: 24 + total * 1.5, hitpoints: total * 1.33 }); }, onDone); };
   // ---------------------------------------------------------------- the ladders
   SKILL_UNLOCKS.woodcutting = SKILL_UNLOCKS.woodcutting.concat([[32, 'Coconut cups: carve them from two coconuts (Pell buys them)'], [38, 'Driftwood on the dry sea bed: Sea Driftwood (Rosie smokes fish over it)'],
     [39, 'Sweet spot: a spark on the chop meter shows the best moment'], [41, "Nests in the acacia: an egg or a feather"], [43, 'Two at once: now and then two logs in the Crack'],
