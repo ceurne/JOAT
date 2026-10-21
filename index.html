@@ -6293,7 +6293,8 @@
     let left = SPRITE_PAGES.length; atlasPages = []; pageTops = SPRITE_PAGES.map(pg => pg[0]);
     SPRITE_PAGES.forEach(([y0, h, url], i) => { const im = new Image(); atlasPages[i] = im;
       im.onload = () => { if(--left === 0){ sheetReady = true; setupGenderPicker(); sheet.dispatchEvent(new Event('load')); } };
-      im.onerror = () => { sheetError = true; }; im.src = url; });
+      // (v169) a page that fails is asked for once more before giving up (a phone on a bad connection drops one now and then)
+      im.onerror = () => { if(im.retried){ sheetError = true; return; } im.retried = true; setTimeout(() => { im.src = url; }, 1500); }; im.src = url; });
   } else {
     sheet.onload = () => { try{ buildAtlasPages(); }catch(e){ atlasPages = null; } sheetReady = true; setupGenderPicker(); };
     sheet.onerror = () => { sheetError = true; };
@@ -6312,7 +6313,9 @@
   battleBgImg.src = BATTLE_BG_URL;
   // some mobile browsers can stall a load without ever firing onerror —
   // surface a message instead of hanging on a blank screen forever
-  setTimeout(() => { if(!sheetReady) sheetError = true; }, 12000);
+  // (v169, never-stuck round) slow is not broken: after 12 s it says so, and the game still starts when the pictures arrive
+  let sheetSlow = false;
+  setTimeout(() => { if(!sheetReady) sheetSlow = true; }, 12000);
 
   function setupGenderPicker(){
     if(playerGender){ ccApply(); return; } // already chosen on a previous visit
@@ -20307,7 +20310,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v168';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v169';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -20435,14 +20438,14 @@
 
     ctx.clearRect(0,0,viewW,viewH);
 
-    if(sheetError){
+    if((sheetError || sheetSlow) && !sheetReady){
       ctx.fillStyle = '#274a1e';
       ctx.fillRect(0,0,viewW,viewH);
       ctx.fillStyle = '#fff';
       ctx.font = '13px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('The images could not be loaded.', viewW/2, viewH/2-10);
-      ctx.fillText('Reload the page to try again.', viewW/2, viewH/2+12);
+      ctx.fillText(sheetError ? 'The images could not be loaded.' : 'Still loading the pictures. A slow connection?', viewW/2, viewH/2-10);
+      ctx.fillText(sheetError ? 'Reload the page to try again.' : 'Hang on, or reload the page.', viewW/2, viewH/2+12);
       requestAnimationFrame(frame);
       return;
     }
@@ -22553,7 +22556,9 @@
     picks.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.p === 'nose:carrot' || x.dataset.p === 'arms:yes')); }
   function verdict(){
     const off = balls.map((r, i) => Math.abs(r - TARGET[i])), bad = off.reduce((a, b) => a + b, 0), wrongOrder = balls[0] < balls[1] || balls[1] < balls[2];
-    let score = 10 - Math.min(6, bad) - (wrongOrder ? 3 : 0) + (hat ? 1 : 0) + (scarf ? 1 : 0) - (nose === 'sausage' ? 0 : 0);
+    // (v169, panel mg1 "moeilijker") no size number on screen any more, only the ring; every bit off counts, and a
+    // snowman without a hat or a scarf loses a point for each
+    let score = 10 - Math.min(6, Math.round(bad * 1.5)) - (wrongOrder ? 3 : 0) - (hat ? 0 : 1) - (scarf ? 0 : 1);
     score = Math.max(1, Math.min(10, score));
     const lines = [];
     if(wrongOrder) lines.push("The head is bigger than the body. Is it upside down? Is it a snow-mushroom?");
@@ -22630,7 +22635,6 @@
       drawBall(cur.r, cur.x, GROUND); const rr = 2 * Math.max(6, Math.min(16, Math.round(cur.r)));
       for(let k = 0; k < 4; k++){ const a = cur.spin * cur.dir + k * 1.57, sx = cur.x + Math.cos(a) * rr * .55, sy = GROUND - rr - 2 + Math.sin(a) * rr * .55; if(Math.sin(a) > -.9){ g.fillStyle = '#b9c9de'; g.fillRect(snap(sx), snap(sy), 4, 2); g.fillStyle = '#dfe8f3'; g.fillRect(snap(sx), snap(sy) - 2, 2, 2); } }
       const R8 = cur.dir > 0 ? A.you_right : A.you_left, f = pushT > 0 ? R8[Math.floor(walkF) % 8] : (cur.dir > 0 ? A.you_right_idle : A.you_left_idle); person(g, f, cur.x - cur.dir * (cur.r * 2 + 22), GROUND + 4, 1.5);
-      g.fillStyle = '#fff'; g.font = '13px "Nunito Sans", sans-serif'; g.fillText(`size ${Math.round(cur.r)} / ${tr}`, 8, H - 10);
     }
     if(judged){ const moving = tomasX > BUILD_X + 90; person(g, moving ? A.p_tomas.w[1 + Math.floor(now / 110) % 8] : A.p_tomas.w[0], tomasX, GROUND + 4, 1.6); }
     if(say && now < say.until){ if(say.who === 'tomas') bubble(g, say.text, tomasX, GROUND - 100, 220); else bubble(g, say.text, W - 50, GROUND - 60, 150); }
@@ -23602,8 +23606,11 @@
     out.innerHTML = `<b>${FIG[fig].name}: ${tot} / 30.</b> ` + (tot >= 27 ? 'Ingrid wipes away a tear. "Something in my eye. Ice."' : tot >= 20 ? 'A fine figure. Tomas claps with his mittens, which makes no sound.' : 'The ice has seen better. The ice has also seen worse. Mostly better.');
     speak('pig', pick([`I gave you a ${scores[2].v}. It's not about the skating. It's about how you made me FEEL.`, `${scores[2].v}. You didn't skate a pig. Always skate a pig.`, `${scores[2].v}, because my hooves are cold.`]), 5200);
   }
+  // (v169) the art has no walking-down frames under A.you_down (only you_down_idle): skating downwards threw an error
+  // every frame and the game froze, so no figure could be finished. The walking-down frames are in the atlas.
+  const YOU_DOWN = [0, 1, 2, 3, 4, 5, 6, 7].map(i => '@char_female_down_' + i);
   function drawSkater(now){
-    const frames = A['you_' + sk.dir], moving = Math.hypot(sk.vx, sk.vy) > 12;
+    const frames = A['you_' + sk.dir] || (sk.dir === 'down' ? YOU_DOWN : A.you_up), moving = Math.hypot(sk.vx, sk.vy) > 12;
     const src = moving ? frames[[1, 1, 2, 2, 5, 5, 6, 6][Math.floor(walk / 14) % 8]] : A['you_' + sk.dir + '_idle'];
     g.fillStyle = 'rgba(40,70,110,.25)'; g.beginPath(); g.ellipse(sk.x, sk.y + 2, 14, 4, 0, 0, 7); g.fill();
     if(state === 'fallen'){ const i = img(A.you_down_idle); if(ready(i)){ g.save(); g.translate(sk.x, sk.y - 6); g.rotate(Math.min(1, (now - fallT) / 250) * Math.PI / 2); g.imageSmoothingEnabled = false;
@@ -24754,7 +24761,7 @@ function game(id, setup){   // a game card: canvas, mode tabs, two action button
   const st = { mode: HK.mode, wins: HK.wins0, losses: HK.losses0, say: null, sayUntil: 0, pigSay: null, cheer: 0 };
   const api = { cv, g, out, b0, b1, b2, st, setScore(){ score.textContent = `You ${st.wins} - ${st.losses} ${HK.O.name}`; },
     speak(t, ms = 2600){ st.say = HK.nm(t); st.sayUntil = performance.now() + ms; }, pigSpeak(t, ms = 2400){ st.pigSay = t; st.pigUntil = performance.now() + ms; },
-    win(t){ HK.win(); st.wins++; st.cheer = performance.now() + 1600; api.setScore(); out.textContent = t; beep(660, .12, 'triangle', .07); setTimeout(() => beep(880, .16, 'triangle', .07), 120); },
+    win(t, times){ HK.win(times); st.wins++; st.cheer = performance.now() + 1600; api.setScore(); out.textContent = t; beep(660, .12, 'triangle', .07); setTimeout(() => beep(880, .16, 'triangle', .07), 120); },
     lose(t){ HK.lose(); st.losses++; api.setScore(); out.textContent = t; beep(160, .25, 'sawtooth', .04); } };
   const M = setup.modes(api);
   for(const k in M){ const s0 = M[k].start; if(s0) M[k].start = function(){ HK.unlock(); return s0.apply(this, arguments); }; }
@@ -24836,25 +24843,8 @@ function dieCube(g, x, y, v, s, rot, tumble){   // a bone die seen from above at
 }
 
 // ---------------------------------------------------------------- 1 · Hulda's games, round 3 (user: "shall we do another game?" instead of
-// arm wrestling): A axe throwing at a log target, B shove ha'penny down the long table, C a mead-drinking race.
-function logTarget(g, x, y, r){   // a sawn log end on the wall: bark, growth rings, cracks and a painted red centre
-  g.fillStyle = '#2a1a10'; g.beginPath(); g.arc(x, y, r + 3, 0, 7); g.fill();
-  g.fillStyle = '#5a3a1e'; g.beginPath(); g.arc(x, y, r + 1, 0, 7); g.fill();
-  for(let i = 0; i < 18; i++){ const a = i / 18 * 6.283; g.fillStyle = i % 2 ? '#4a2c16' : '#6e4526'; g.fillRect(x + Math.cos(a) * (r - 1) - 2, y + Math.sin(a) * (r - 1) - 2, 4, 4); }
-  const rings = ['#d9b07a', '#c99a62', '#d9b07a', '#c99a62', '#d9b07a'];
-  rings.forEach((c, i) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r * (1 - i * .19) - 4, 0, 7); g.fill(); g.strokeStyle = 'rgba(90,50,20,.45)'; g.lineWidth = 1; g.stroke(); });
-  g.fillStyle = '#b8201c'; g.beginPath(); g.arc(x, y, r * .14, 0, 7); g.fill(); g.fillStyle = '#e04a3a'; g.fillRect(x - 3, y - r * .14 + 2, 4, 2);
-  g.strokeStyle = 'rgba(60,30,10,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + r * .2, y - r * .1); g.lineTo(x + r * .75, y - r * .35); g.moveTo(x - r * .3, y + r * .2); g.lineTo(x - r * .7, y + r * .55); g.stroke();
-}
-function axe(g, x, y, ang, s){   // a throwing axe: ash handle with a leather grip, iron head with a bright edge
-  g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, s);
-  g.fillStyle = '#2a1a10'; g.fillRect(-2, -20, 5, 34); g.fillStyle = '#a8784a'; g.fillRect(-1, -19, 3, 32); g.fillStyle = '#c9965e'; g.fillRect(-1, -19, 1, 32);
-  g.fillStyle = '#5a3a1e'; g.fillRect(-2, 4, 5, 9); g.fillStyle = '#7a5030'; for(let k = 0; k < 4; k++) g.fillRect(-2, 5 + k * 2, 5, 1);
-  g.fillStyle = '#2a2030'; g.beginPath(); g.moveTo(-2, -21); g.lineTo(12, -27); g.lineTo(14, -12); g.lineTo(-2, -13); g.closePath(); g.fill();
-  g.fillStyle = '#6a6e78'; g.beginPath(); g.moveTo(0, -20); g.lineTo(11, -25); g.lineTo(12, -14); g.lineTo(0, -14); g.closePath(); g.fill();
-  g.fillStyle = '#d8dce4'; g.fillRect(10, -25, 2, 11); g.fillStyle = '#9aa0aa'; g.fillRect(2, -19, 6, 2);
-  g.restore();
-}
+// arm wrestling): B shove ha'penny down the long table, C a mead-drinking race. (v169, panel mg1: the axe throwing that
+// was A is gone; it had not been in the game since darts took its place.)
 function tankard(g, x, y, level, tilt, s = 1){   // a wooden tankard: staves, two iron bands, a handle, mead and foam inside
   g.save(); g.translate(x, y); g.rotate(tilt); g.scale(s, s);
   g.fillStyle = '#2a1a10'; g.fillRect(-23, -40, 46, 52); g.fillRect(22, -30, 12, 30);
@@ -24868,23 +24858,12 @@ function tankard(g, x, y, level, tilt, s = 1){   // a wooden tankard: staves, tw
   g.restore();
 }
 if(HK.kind === 'shove') game('g_hulda', { who: 'Hulda', sayX: 196, sayY: 92, pig: [234, 156], modes(A){
-  const S = { axes: [], fly: null, phase: 'x', aim: 0, spin: 0, t: 0, me: 0, hu: 0, n: 0, coins: [], power: 0, pdir: 1, slide: null, myMead: 1, huMead: 1, breath: 0, holding: false, cough: 0, run: false, flash: null };
+  const S = { aim: 0, t: 0, me: 0, hu: 0, n: 0, coins: [], power: 0, pdir: 1, slide: null, myMead: 1, huMead: 1, breath: 0, holding: false, cough: 0, run: false, flash: null };
   const lvl = () => 1 + Math.min(4, Math.floor(A.st.wins / 2)) * .15;
   const flash = (text, col = '#f3d98a') => { S.flash = { text, col, t: performance.now() }; };
-  const TX = 150, TY = 104, TR = 50;
   function backdrop(g){ room(g, 'room_fp_longhouse', 30); const im = IMG.room_fp_longhouse; if(im.complete){ g.drawImage(im, (im.width - W) / 2, 250, W, 120, 0, 220, W, 120); g.fillStyle = 'rgba(20,14,10,.28)'; g.fillRect(0, 220, W, 120); } }
   function hudText(g, t){ g.font = "16px 'Jersey 10', monospace"; const tw = g.measureText(t).width; g.fillStyle = 'rgba(20,14,10,.8)'; g.fillRect(6, 6, tw + 10, 20); g.fillStyle = '#f3e3c0'; g.fillText(t, 11, 21); }
   function flashDraw(g, now){ if(S.flash && now - S.flash.t < 1100){ g.font = "20px 'Jersey 10', monospace"; g.textAlign = 'center'; g.fillStyle = '#2a2030'; g.fillText(S.flash.text, 151, 201); g.fillStyle = S.flash.col; g.fillText(S.flash.text, 150, 200); g.textAlign = 'left'; } }
-  // ---- A · axes: lock the line left-right, then let go when the spinning axe in your hand points its blade at the log
-  const ringPts = d => d <= TR * .14 ? 5 : d <= TR * .33 ? 4 : d <= TR * .52 ? 3 : d <= TR * .71 ? 2 : d <= TR * .9 ? 1 : 0;
-  function axeThrow(who, dx, dy, good){ S.fly = { who, x0: who === 'me' ? 150 : 40, y0: who === 'me' ? 320 : 230, x1: TX + dx, y1: TY + dy, good, t0: performance.now() }; beep(260, .08, 'triangle', .04); }
-  function axeLand(f){ const d = Math.hypot(f.x1 - TX, f.y1 - TY), p = f.good ? ringPts(d) : 0;
-    if(f.good && p > 0){ S.axes.push({ x: f.x1, y: f.y1, who: f.who, rot: rnd(-.3, .3) }); beep(120, .09, 'square', .08); }
-    else { S.drop = { x: f.x1, y: f.y1, t0: performance.now() }; beep(330, .05); setTimeout(() => beep(260, .05), 90); }
-    if(f.who === 'me'){ S.me += p; flash(!f.good ? 'Clonk! Handle first.' : p ? `+${p}` : 'Missed the log', p ? '#f3d98a' : '#ff9a8a'); }
-    else { S.hu += p; }
-    S.fly = null; }
-  function huldaAxe(){ const sc = 1.1 - lvl() * .2, a = rnd(0, 7), d = Math.abs(rnd(0, 1) + rnd(0, 1) - 1) * TR * sc; axeThrow('hu', Math.cos(a) * d, Math.sin(a) * d, Math.random() < .9); }
   // ---- B · shove ha'penny, round 4 (user: "change your direction, and the coins can knock each other away"): the
   // table is a board 100 wide and 300 long in its own units; coins slide in two directions, slow down, bounce off each
   // other (equal weights, a little loss) and fall off the sides or the far end. You turn your aim with Left / Right
@@ -24910,28 +24889,6 @@ if(HK.kind === 'shove') game('g_hulda', { who: 'Hulda', sayX: 196, sayY: 92, pig
     for(const c of S.coins) if(c.moving) moving = true;
     return moving; }
   return {
-    A: { start(){ S.axes = []; S.fly = null; S.me = 0; S.hu = 0; S.n = 0; S.phase = 'x'; A.out.textContent = 'Axe throwing, five axes each. Tap to stop the line left-right. Then the axe in your hand spins: let go when the blade points up at the log. Wrong moment: it hits handle-first and falls off.'; A.b1.textContent = 'Throw'; A.b2.textContent = 'New game';
-        A.speak(pickOne(['Five axes. Hit the log, not the cat. We do not have a cat any more.', 'Rimewick rules: the loser carries the winner home.']), 3200); },
-      b1(){ if(S.fly || S.n >= 5 || S.wait) return; if(S.phase === 'x'){ S.lockX = S.aim; S.phase = 'spin'; beep(500, .04); return; }
-        const err = Math.abs(((S.spin % 6.283) + 6.283) % 6.283 - 0) , e = Math.min(err, 6.283 - err), good = e < .75 / lvl() + .25, dy = rnd(-1, 1) * TR * (.15 + e * .5);
-        axeThrow('me', S.lockX, dy, good); S.phase = 'x'; S.n++; S.wait = true;
-        setTimeout(() => { if(A.st.mode !== 'A'){ S.wait = false; return; } huldaAxe(); setTimeout(() => { S.wait = false; if(S.n >= 5){ const w = S.me > S.hu;
-          if(S.me === S.hu) A.out.textContent = `A draw at ${S.me}. Hulda calls it a warm-up.`; else if(w){ A.win(`You ${S.me}, Hulda ${S.hu}. Hulda carries you home. You live next door.`); A.speak('Again. With the big axes.'); } else { A.lose(`You ${S.me}, Hulda ${S.hu}. You carry Hulda home. She is heavy. She is proud of it.`); A.speak('Ha! Lift with your knees.'); }
-          setTimeout(() => A.st.mode === 'A' && this.start(), 2600); } }, 900); }, 900); },
-      b2(){ this.start(); },
-      tick(dt){ S.t += dt; S.aim = Math.sin(S.t * 2.2 * lvl()) * TR * 1.1; if(S.phase === 'spin') S.spin += dt * 7.5 * lvl(); },
-      draw(now){ const g = A.g; backdrop(g); logTarget(g, TX, TY, TR);
-        for(const a of S.axes){ axe(g, a.x - 4, a.y + 18, -.2 + a.rot, a.who === 'me' ? 1.2 : 1.05); if(a.who === 'hu'){ g.fillStyle = '#5a6aa0'; g.fillRect(a.x - 6, a.y + 26, 5, 3); } }
-        if(S.drop){ const u = (now - S.drop.t0) / 600; if(u < 1) axe(g, S.drop.x + u * 20, S.drop.y + u * u * 140, u * 6, 1.2); }
-        sprite(g, S.fly && S.fly.who === 'hu' ? 'npc_hulda_right_idle' : 'npc_hulda_down_idle', -30, 120, 2.4);
-        pig(g, 234, 156, now, now < A.st.cheer, 1.3);
-        if(S.fly){ const f = S.fly, u = clamp((now - f.t0) / 420, 0, 1), x = f.x0 + (f.x1 - f.x0) * u, y = f.y0 + (f.y1 - f.y0) * u - Math.sin(u * Math.PI) * 40;
-          axe(g, x, y, u * 9.4, f.who === 'me' ? 2 - .8 * u : 1.1); if(u >= 1) axeLand(f); }
-        if(!S.fly && S.n < 5 && !S.wait){ if(S.phase === 'x'){ g.fillStyle = 'rgba(255,255,255,.75)'; g.fillRect(TX + S.aim - 1, TY - TR - 8, 2, TR * 2 + 16); }
-          else { g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(TX + S.lockX - 1, TY - TR - 8, 2, TR * 2 + 16); }
-          axe(g, 150, 300, S.phase === 'spin' ? S.spin : 0, 2);
-          g.fillStyle = '#2a1a10'; g.fillRect(132, 306, 40, 40); g.fillStyle = '#6a4a2a'; g.fillRect(134, 322, 36, 18); g.fillStyle = '#f2cba4'; g.fillRect(134, 306, 36, 16); g.fillStyle = '#c99a72'; for(let k = 0; k < 4; k++) g.fillRect(137 + k * 8, 308, 2, 8); }
-        hudText(g, `Axe ${Math.min(5, S.n + 1)}/5   You ${S.me} - Hulda ${S.hu}`); flashDraw(g, now); } },
     B: { start(){ S.coins = []; S.slide = null; S.n = 0; S.turn = 'me'; S.power = 0; S.aim = 0; S.turnL = S.turnR = false;
         A.out.textContent = "Shove ha'penny: five coins each. Hold Left or Right to aim (the sides bounce), hold Shove and let go when the power is right. A coin scores the bed it stops in (on a line counts the bed it is mostly in). The sides bounce, the far end does not. Knock her coins out, and mind she knocks yours."; 
         A.b0.hidden = false; A.b0.textContent = 'Left'; A.b1.textContent = 'Hold: shove'; A.b2.textContent = 'Right';
@@ -24941,7 +24898,8 @@ if(HK.kind === 'shove') game('g_hulda', { who: 'Hulda', sayX: 196, sayY: 92, pig
       up1(){ if(!S.charging) return; S.charging = false; coinShove('me', S.power, S.aim); S.n++; },
       huldaShot(){ const mine = S.coins.filter(c => c.who === 'me' && bedOf(c) >= 3);
         let ang, pw;
-        if(mine.length && Math.random() < .45 + .1 * (lvl() - 1)){ const t = mine.sort((a, b) => bedOf(b) - bedOf(a))[0]; ang = Math.atan2(t.u, t.v - 8); pw = clamp((t.v + 60) / 290, .3, 1); A.speak(pickOne(['That one is in my way.', 'Excuse me, little coin.', 'Hulda knocks.']), 1400); }
+        // (v169, panel mg1) she knocks your coins away less at first (was .45), and more as you keep winning
+        if(mine.length && Math.random() < .15 + .5 * (lvl() - 1)){ const t = mine.sort((a, b) => bedOf(b) - bedOf(a))[0]; ang = Math.atan2(t.u, t.v - 8); pw = clamp((t.v + 60) / 290, .3, 1); A.speak(pickOne(['That one is in my way.', 'Excuse me, little coin.', 'Hulda knocks.']), 1400); }
         else { const bed = 3 + Math.floor(Math.random() * 3), v = (LINES[bed - 1] + LINES[bed]) / 2; ang = rnd(-.08, .08); pw = clamp((v * Math.log(4) - 150 * 1) / 270 * .9, .2, 1); }
         const err = .08 / lvl(); coinShove('hu', clamp(pw + rnd(-err, err), 0, 1), ang + rnd(-err, err) * .6); },
       tick(dt){ if(S.turnL) S.aim = Math.max(-.45, S.aim - dt * .7); if(S.turnR) S.aim = Math.min(.45, S.aim + dt * .7);
@@ -25028,13 +24986,14 @@ if(HK.kind === 'dice') game('g_dice', { who: 'Olaf', sayX: 196, sayY: 92, pig: [
   }
   function tickAll(dt){ const c = S.cup; if(c && c.ph !== 'shake' && c.ph !== 'tip'){ if(physics(dt) && performance.now() - c.t2 > 350){ S.cup = null; S.busy = false; c.then(); } } else if(c && c.ph === 'tip') physics(dt); }
   const MM = {
-    A: { start(){ S.dice = []; S.ocup = null; S.streak = 0; S.top = 'Streak: 0 of 5'; A.out.textContent = 'Higher or lower than the last roll? Five right in a row and you take the pot.'; A.b1.textContent = 'Higher'; A.b2.textContent = 'Lower';
+    A: { start(){ S.dice = []; S.ocup = null; S.streak = 0; S.top = 'Streak: 0 of 5'; A.out.textContent = 'Higher or lower than the last roll? Five right in a row and Olaf pays six times your bet.'; A.b1.textContent = 'Higher'; A.b2.textContent = 'Lower';
         A.speak(OLAF[Math.floor(Math.random() * 3)], 3000); const a = d6(), b = d6(); S.cur = a + b; S.dice = [{ v: a, x: 132, y: 290, z: 0, rot: .1, still: true }, { v: b, x: 170, y: 294, z: 0, rot: -.12, still: true }]; },
       b1(){ this.guess(1); }, b2(){ this.guess(-1); },
       guess(dir){ if(S.busy) return; const a = d6(), b = d6(), t = a + b;
         throwDice([a, b], 'you', () => { const ok = t !== S.cur && (t > S.cur) === (dir > 0);
           if(t === S.cur){ A.out.textContent = `${t} again. A draw counts as wrong. Olaf's rules. Olaf wrote them.`; S.streak = 0; }
-          else if(ok){ S.streak++; A.out.textContent = `${t}! Right.`; if(S.streak >= 5){ A.win('Five in a row! Olaf pays up, very slowly, one coin at a time.'); A.speak('The dice are tired. That is why.'); S.streak = 0; } }
+          else if(ok){ S.streak++; A.out.textContent = `${t}! Right.`; // (v169, panel mg1) six times the bet: with the best guesses you come out about even
+            if(S.streak >= 5){ A.win('Five in a row! Olaf pays up, six times over, very slowly, one coin at a time.', 6); A.speak('The dice are tired. That is why.'); S.streak = 0; } }
           else { S.streak = 0; A.lose(`${t}. Wrong. The pot goes back to Olaf.`); A.speak(pickOne(['Bad luck. Good for me, though.', 'The dice have spoken. They said "Olaf".'])); }
           S.cur = t; S.top = 'Streak: ' + S.streak + ' of 5'; }); }, tick: tickAll },
     B: { start(){ S.ocup = null; S.dice = []; S.me = 0; S.ol = 0; S.turn = 0; S.top = 'You 0 - Olaf 0  (first to 30)'; A.out.textContent = 'Pig: roll as often as you dare, then Bank. Roll a 1 and you lose everything from this turn.'; A.b1.textContent = 'Roll'; A.b2.textContent = 'Bank';
@@ -25089,7 +25048,10 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   // B around the clock (hit 1 to 10 in order), C 101 down to exactly nought
   const BX = 128, BY = 112, R = 74, S = { darts: [], fly: [], aim: { x: 0, y: 0 }, phase: 'x', me: 0, gr: 0, rnd: 1, n: 0, flash: null, t: 0, chips: [], arm: 0 };
   const GRETA = HK.O.darts;
-  const mode = () => A.st.mode, skill = () => .62 - Math.min(.3, A.st.wins * .06);   // Greta gets better the more you beat her
+  // (v169, panel mg1 "makkelijker") Greta's spread per game, so an ordinary player wins about half at first; she still
+  // gets better the more you beat her, but more slowly (and the aiming line speeds up less)
+  const GRETA_SPREAD = { A: 4, B: 2.2, C: 2.4 };
+  const mode = () => A.st.mode, skill = () => .62 * (GRETA_SPREAD[mode()] || 1) * (1 - Math.min(.3, A.st.wins * .04));
   const segPt = (n, ring) => { const k = NUMS.indexOf(n), a = k * Math.PI / 10, r = R * ({ single: .72, treble: .505, double: .95, inner: .3 }[ring] || .72); return [Math.sin(a) * r, -Math.cos(a) * r]; };
   const numAt = (dx, dy) => { const r = Math.hypot(dx, dy) / R; if(r <= .1 || r > 1) return 0; return NUMS[Math.floor(((Math.atan2(dx, -dy) + Math.PI * 2 + Math.PI / 20) % (Math.PI * 2)) / (Math.PI / 10))]; };
   function reset(text){ S.gen = (S.gen || 0) + 1; S.darts = []; S.fly = []; S.rnd = 1; S.n = 0; S.phase = 'x'; S.turnStart = null; S.bust = false;
@@ -25157,7 +25119,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       g.font = "16px 'Jersey 10', monospace"; const tw = g.measureText(t).width; g.fillStyle = 'rgba(20,14,10,.8)'; g.fillRect(W - tw - 16, 6, tw + 10, 20); g.fillStyle = '#f3e3c0'; g.fillText(t, W - tw - 11, 21); }
   }
   const throwBtn = { b1(){ if(S.n >= 3 || S.fly.length || S.bust) return; if(S.phase === 'x'){ S.fx = S.aim.x; S.phase = 'y'; beep(500, .04); } else { throwMine(S.fx, S.aim.y); S.phase = 'x'; } },
-    tick(dt){ const sp = 1 + Math.min(.6, A.st.wins * .1); S.t += dt * sp; S.aim.x = Math.sin(S.t * 2.6) * R * 1.05; S.aim.y = Math.sin(S.t * 3.1 + 1) * R * 1.05; }, draw };
+    tick(dt){ const sp = 1 + Math.min(.3, A.st.wins * .05); S.t += dt * sp; S.aim.x = Math.sin(S.t * 2.6) * R * 1.05; S.aim.y = Math.sin(S.t * 3.1 + 1) * R * 1.05; }, draw };
   return {
     A: { ...throwBtn, start(){ reset('Most points in three rounds of three darts. Tap Throw to stop the line left-right, then again for up-down.'); A.b1.textContent = 'Throw'; A.b2.textContent = 'New game'; }, b2(){ this.start(); } },
     B: { ...throwBtn, start(){ S.top = S.top || 10; reset(`Around the clock: hit 1, then 2, then 3... up to ${S.top}, in order. Any ring of the number counts${S.top === 20 ? ' - and up to 15 a double jumps you on 2, a treble 3' : ''}. First to get round wins. Your next number glows on the board.`); A.b1.textContent = 'Throw'; A.b2.textContent = 'New game'; A.b0.hidden = false; A.b0.textContent = S.top === 10 ? 'Up to 20' : 'Up to 10'; }, b0(){ S.top = S.top === 10 ? 20 : 10; this.start(); }, b2(){ this.start(); } },
@@ -25222,8 +25184,9 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         nag(){ showToast('Finish this game first.'); },
         press(){ if(run.locked) return; if(run.bet > coins || tgCapped(sc)) run.bet = 0; run.locked = true; run.stake = run.bet; renderBet(); },
         unlock(){ if(!run.locked) return; run.locked = false; run.stake = 0; renderBet(); },
-        win(){ tgState.w[key] = (tgState.w[key] || 0) + 1; tgSave();
-          if(run.stake) pay(run.stake, `+${run.stake} copper`);
+        win(times){ tgState.w[key] = (tgState.w[key] || 0) + 1; tgSave();
+          const won = run.stake * (times || 1);
+          if(won) pay(won, `+${won} copper`);
           run.locked = false; run.stake = 0; renderBet();
           if(tgWins(kind) >= TG_TITLE_WINS && !bwMet.has('title_tav_' + kind)){ markMet('title_tav_' + kind); run.title = true; } },
         lose(){ tgState.l[key] = (tgState.l[key] || 0) + 1; tgSave();
