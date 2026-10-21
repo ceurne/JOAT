@@ -12603,7 +12603,7 @@
       { lv: 20, title: 'Nightcaps', need: { nightcap: 2 }, coins: 45, item: 'lucky_pebble', offer: "Two nightcaps from the old woods. For a very old recipe. It was my grandmother's. She was a witch. A nice one.", thanks: "Oh, it smells just like her kitchen. Here, dear, this was hers too." } ],
     cooking: [
       { lv: 5, title: 'Lunch Rush', need: { cooked_roach: 3 }, coins: 10, offer: "Three cooked roach, love. Lunch rush. And by rush I mean Joren.", thanks: "Lovely and crisp. He'll eat all three and ask for a fourth." },
-      { lv: 10, title: 'Swamp Special', need: { cooked_tench: 2 }, coins: 20, offer: "Two cooked tench. The guards dared each other to eat swamp fish. I'm making money off it.", thanks: "Oh, they'll regret this. I'll sell them bread after." },
+      { lv: 10, title: 'Swamp Special', need: { cooked_tench: 2 }, coins: 20, offer: "Two cooked carp. The guards dared each other to eat swamp fish. I'm making money off it.", thanks: "Oh, they'll regret this. I'll sell them bread after." },
       { lv: 15, title: 'Trout for the Baron', need: { cooked_trout: 2 }, coins: 30, offer: "Two cooked trout for the baron's supper. Cooked PERFECTLY, love. He can tell. He can't. But he says he can.", thanks: "Gorgeous. He'll say it's a bit dry. It isn't." },
       { lv: 20, title: 'The Big Feast', need: { cooked_catfish: 1 }, coins: 50, item: 'honey_cake', offer: "A cooked catfish. For the harvest feast. It's the centrepiece. Next to my cakes. Which are better.", thanks: "Look at that! Almost as nice as my cakes. Almost. Here, have one." } ],
     alchemy: [
@@ -15909,10 +15909,28 @@
     { id: 'grubb_pebble', who: 'Grubb', note: 'Lost: one lucky pebble. Reward: a smaller tax. Maybe.', need: { lucky_pebble: 1 }, coins: 12, xp: { thieving: 30 } },
   ];
   const boardDay = () => new Date().toDateString();
-  function todaysJobs(){
-    const d = new Date(); let x = (d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate()) >>> 0; const out = [];
-    while(out.length < 3){ x = (x * 1103515245 + 12345) >>> 0; const j = BOARD_JOBS[(x >>> 8) % BOARD_JOBS.length]; if(!out.includes(j)) out.push(j); }
+  // (v168, owner: "laat het wel mooi afwisselen") every note comes up once in five days, in a new order each round, and
+  // no note is on the board two days running (it used to be three random notes a day: some came back and back, the last
+  // of the fifteen took three weeks)
+  function boardOrder(cycle){
+    const order = BOARD_JOBS.slice(); let x = (cycle * 2654435761 + 977) >>> 0;
+    for(let i = order.length - 1; i > 0; i--){ x = (x * 1103515245 + 12345) >>> 0; const j = (x >>> 8) % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+    return order;
+  }
+  function boardDayJobs(day){
+    const per = 3, days = Math.ceil(BOARD_JOBS.length / per), cycle = Math.floor(day / days), k = day - cycle * days;
+    const order = boardOrder(cycle), last = (days - 1) * per, prev = boardOrder(cycle - 1).slice(last);
+    // the first day of a round may not repeat the last day of the round before: such a note swaps places with one from
+    // the middle days (never the last day, so a round always ends on its own order)
+    for(let i = 0; i < per; i++){ if(!prev.includes(order[i])) continue;
+      for(let m = per; m < last; m++) if(!prev.includes(order[m])){ [order[i], order[m]] = [order[m], order[i]]; break; } }
+    const out = order.slice(k * per, k * per + per);
+    for(const j of order){ if(out.length >= per) break; if(!out.includes(j)) out.push(j); }
     return out;
+  }
+  function todaysJobs(){
+    const d = new Date();
+    return boardDayJobs(Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000));
   }
   const jobHave = j => Object.entries(j.need).every(([k, n]) => (inventory[k] || 0) >= n);
   // user: tap Accept on the note you want and it becomes a quest (hand it in at the board, any day)
@@ -15990,8 +16008,9 @@
       roomText: "A cave under the swamp, green crystals glowing in the walls. Over the black water hangs the Mire Dragon, wings slowly beating. It has seen you.",
       goneText: "Just the drip of water and the hum of the crystals. The dragon is gone, for now." },
     // round 8 (user: under the ice lake, hole A1, cave B2): the hole in the middle of the frozen lake (FP.hole)
+    // (v168) the Frost Horror message waits until the climb is over: Wexley says you came back down the mountain
     frostpeak: { enemy: 'frost_horror', scene: 'frostpeak', lvl: 24, lair: [7, 39], quest: 'boss_frostpeak', title: 'frostbane', item: 'rime_ring',
-      torches: [[22, 27], [16, 33], [12, 45]], name: 'Frostpeak', room: 'lair_ice', go: 'Climb down the ice steps.', needs: () => hasVisited('frostpeak'),
+      torches: [[22, 27], [16, 33], [12, 45]], name: 'Frostpeak', room: 'lair_ice', go: 'Climb down the ice steps.', needs: () => hasVisited('frostpeak') && !frayIs('climb'),
       roomSpawn: { x: (7+0.5)*TILE, y: (3+0.8)*TILE, dir: 'down' },
       lairText: "The ice is broken open here, as wide as a cart. The black water sits far below the rim, and a stair of old ice winds down the side into a blue light under the lake. Something big breathes down there. The water shivers every time.",
       goText: "You climb down the ice steps, fingers numb, into the blue light under the lake...",
@@ -17326,7 +17345,9 @@
     if(wexMsg || clockNow < wexMsgCool) return;
     if(dialogueActive || popupOpen || battleActive || cutsceneLocked || station || fishing || chopping || mining || pocket || shopOpen || menuIsOpen() || pendingLevelUps.length) return;
     if(!introSeen) return;
-    const due = Object.entries(BOSSES).find(([k, B]) => !quests[B.quest] && !bossWins(k) && combatLevel() >= B.lvl); if(!due) return;
+    // (v168) only when Wexley has a message to give: a boss that still waits on the story (B.needs) made him walk up
+    // every few seconds, say "Oi! Wait up." and nothing more
+    const due = Object.entries(BOSSES).find(([k, B]) => !quests[B.quest] && !bossWins(k) && combatLevel() >= B.lvl && (!B.needs || B.needs())); if(!due) return;
     // a free spot a few tiles away, in view
     let spot = null;
     for(const [dx, dy] of [[5, 0], [-5, 0], [0, 4], [0, -4], [4, 3], [-4, 3], [3, 0], [-3, 0], [0, 2]]){
@@ -20286,7 +20307,7 @@
   // user: for play testers - write what happened; the game adds where you are,
   // what you were doing and the goal line. Kept under ow_bug_reports (not
   // open_w*), so "Start over" doesn't throw the reports away.
-  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v167';
+  const BUG_KEY = 'ow_bug_reports', GAME_VERSION = 'v168';
   const bugReports = () => { try{ return JSON.parse(localStorage.getItem(BUG_KEY)) || []; }catch(e){ return []; } };
   let bugCtx = null;
   function bugContext(){
@@ -22303,8 +22324,10 @@
       ctx.fillStyle = 'rgba(40,60,90,0.18)'; ctx.beginPath(); ctx.ellipse(sx + 32, sy + 61, 20, 4, 0, 0, 7); ctx.fill();
       if(flip){ ctx.save(); ctx.translate(sx + 64, sy); ctx.scale(-1, 1); drawSprite(name, 0, 0, 64, 64); ctx.restore(); } else drawSprite(name, sx, sy, 64, 64); } });
     fpSolid(c, r);
-    HOTSPOTS.push({ scene: 'frostpeak', x, y, r: 40, label: 'Pet', pages: () => (areaEv('husky'), [ narrate(pickOne(["The husky rolls over for a belly rub. It's the warmest thing on the mountain.",
-      "The husky sniffs your hand, decides you're not food, and goes back to sleep.", "The husky howls in your face. Affectionately. Probably."])) ]) });
+    HOTSPOTS.push({ scene: 'frostpeak', x, y, r: 40, label: 'Pet', pages: () => [ { ...narrate(pickOne(["The husky rolls over for a belly rub. It's the warmest thing on the mountain.",
+      "The husky sniffs your hand, decides you're not food, and goes back to sleep.", "The husky howls in your face. Affectionately. Probably."])),
+      // (v168) counted when you pet it, not when the button's label check walks past it
+      onShow(){ areaEv('husky'); } } ] });
   }
   { const R = MANIFEST.race_sled; if(R){ FPX.decor.push(pixelProp('race_sled', 17.5 * TILE, 56 * TILE - 3, R[2], R[3])); fpSolid(17, 55); } }
   // two reindeer, wandering along the upper terrace below the golem's bend
@@ -24040,8 +24063,10 @@
         ctx.fillStyle = 'rgba(20,40,20,.35)'; ctx.beginPath(); ctx.ellipse(sx + 22, sy + 30, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
         drawSprite(near ? 'pet_toad_down_2' : blink ? 'pet_toad_down_1' : 'pet_toad_down_0', sx, sy + (near ? -6 : 0), 44, near ? 38 : 32); } });
     HOTSPOTS.push({ scene: 'fenmire', x: fx, y: fy, r: 40, label: 'Look', avail: () => true, pages: () => {
-      const name = playerName || 'stranger', first = !atState.done.fen_frog; atDone('fen_frog');
-      return first ? [ narrate('A fat green frog sits on the edge of the pool. It looks up at you.'), say('Frog', '', `Ribbit. ...${name}. Ribbit.`),
+      // (v168) the task counts when you read it (the button's label check asked for these pages, ticked the task and so
+      // the first meeting, where the frog knows your name, was never shown)
+      const name = playerName || 'stranger', first = !atState.done.fen_frog;
+      return first ? [ { ...narrate('A fat green frog sits on the edge of the pool. It looks up at you.'), onShow(){ atDone('fen_frog'); } }, say('Frog', '', `Ribbit. ...${name}. Ribbit.`),
           narrate("It knows your name. You've never seen this frog in your life."), say('Frog', '', "Gerald talks about you. Gerald talks about EVERYTHING. Ribbit.") ]
         : [ say('Frog', '', pickOne([`${name}! Ribbit. Say hello to Gerald. Don't tell him I said his name.`, 'Ribbit. The witch is in a good mood. That means run.', "Ribbit. I'm not a prince. I checked."])) ]; } }); }
   // ---- the statue of you and the pig on Brightwood's square (Brightwood Elite)
@@ -29489,8 +29514,10 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(!prOpen(3)) return null;
       const f = PR_FISH.find(k => inventory[k] > 0);
       if(!f) return [ narrate('The sand here is hot enough to cook on. You need a fish.') ];
-      inventory[f]--; saveInventory(); grantItem('sand_baked_fish', 1);
-      return [ narrate(`You bury the ${ITEMS[f].name.toLowerCase()} in the hot sand and wait.`), narrate('Ten minutes later it comes out baked. And warm.') ]; } });
+      // (v168) the fish goes in when the page shows, not here: the Interact button asks for these pages every few
+      // frames to find its label, and standing next to the spot baked every fish in the bag
+      return [ { ...narrate(`You bury the ${ITEMS[f].name.toLowerCase()} in the hot sand and wait.`), onShow(){ if(!(inventory[f] > 0)) return; inventory[f]--; saveInventory(); grantItem('sand_baked_fish', 1); } },
+        narrate('Ten minutes later it comes out baked. And warm.') ]; } });
   { const tp = TOWN.npc_ingrid && TOWN.npc_ingrid.topics;
     if(TOWN.npc_ingrid) TOWN.npc_ingrid.topics = (S, npc) => [...(tp ? tp(S, npc) : []), ...(prOpen(3) && inventory.sand_baked_fish > 0 ? [{ label: 'I brought you a warm fish.', onChoose(){
       inventory.sand_baked_fish--; saveInventory();
@@ -29611,8 +29638,9 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       return prActive('goblins') && battle && battle.enemyId === 'crack_goblin' ? ['player', 'enemy'] : r; }; }
   HOTSPOTS.push({ get scene(){ return prActive('copper') && !prDay.dug ? N12_SC : '_off'; }, x: CM_SPOT.x - 30, y: CM_SPOT.y + 34, r: 30, label: 'Dig',
     pages: () => { if(!prActive('copper') || prDay.dug) return null;
-      prDay.dug = true; prSaveDay(); const n = 15 + Math.floor(Math.random() * 26); addCoins(n);
-      return [ narrate(`You dig next to the camel's left foot. ${formatMoney(n)} in an old pouch.`), C_('Told you.') ]; } });
+      // (v168) the coins come when the page shows (the button's label check called this and paid out unseen)
+      const n = 15 + Math.floor(Math.random() * 26);
+      return [ { ...narrate(`You dig next to the camel's left foot. ${formatMoney(n)} in an old pouch.`), onShow(){ if(prDay.dug) return; prDay.dug = true; prSaveDay(); addCoins(n); } }, C_('Told you.') ]; } });
   // rides: the camel carries you to the camp, Seabottom or the Crack
   const PR_STOPS = [
     { id: 'camp', label: 'To the caravan camp', at: () => ({ x: CM_SPOT.x - 40, y: CM_SPOT.y + 70 }) },
@@ -30249,6 +30277,12 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         if(d < 11){ const k = (11 - d) / d / 2, nx = p.x + dx * k, ny = p.y + dy * k; if(canStandAt(nx, ny)){ p.x = nx; p.y = ny; } } }
     }
   }
+  // (v168) back at Pip: his spot, or Pip himself (he wanders up to two tiles from it, and standing next to him did nothing)
+  function pupAtPip(h){
+    if(Math.hypot(player.x - h.x, player.y - h.y) < 60) return true;
+    const pip = currentScene.npcs.find(n => n.spritePrefix === 'npc_pip');
+    return !!pip && Math.hypot(player.x - pip.x, player.y - pip.y) < 60;
+  }
   function pupUpdate(dt){
     const U = pupS();
     if(!pupCan()){ PUPS = null; return; }
@@ -30264,7 +30298,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         if(d > 3){ const step = Math.min(d, player.speed * 0.55 * dt); const nx = p.x + dx / d * step, ny = p.y + dy / d * step;
           if(canStandAt(nx, ny)){ p.x = nx; p.y = ny; } else p.until = 0; p.t += dt * 1000; p.d8 = FRX_DIRS[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8]; } else p.t = 0; }
       pupChainMove(PUPS.filter(p => p.caught), dt); pupSeparate(PUPS);
-      if(PUPS.every(p => p.caught) && Math.hypot(player.x - h.x, player.y - h.y) < 60 && !dialogueActive && !cutsceneLocked){
+      if(PUPS.every(p => p.caught) && pupAtPip(h) && !dialogueActive && !cutsceneLocked){
         PUPS = null; U.n = 1; U.day = ernToday(); U.st = 'food'; savePets(); ernHeartPop = performance.now();
         startCutscene([ say('Pip', 'npc_pip', 'Six. Fine.'), ernHearts('bis_s_idle', 1, 3, 'Pip trusts you a little more.') ]); }
       return;
@@ -30274,7 +30308,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(!PUPS || PUPS.length !== 1){ PUPS = [{ x: player.x - 20, y: player.y + 6, caught: true, t: 0, d8: 's', tint: 1 }]; }
       pupChainMove(PUPS, dt); pupSeparate(PUPS);
       const h = PUP_HOME();
-      if(currentScene.id === 'brightwood' && Math.hypot(player.x - h.x, player.y - h.y) < 60 && !dialogueActive && !cutsceneLocked){
+      if(currentScene.id === 'brightwood' && pupAtPip(h) && !dialogueActive && !cutsceneLocked){
         PUPS = null;
         if(U.st === 'lost'){ U.found = false; U.n = 3; U.day = ernToday(); U.st = 'run'; savePets(); ernHeartPop = performance.now();
           startCutscene([ narrate('Pip counts them again. Six.'), ernHearts('bis_s_idle', 3, 3, 'Three days, three jobs.') ]); }
@@ -30292,6 +30326,9 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   pipPupPages = function(npc, S){
     if(!pupCan()) return null;
     const U = pupS(), today = ernToday();
+    // (v168) his lesson comes first ("You found my dog. So I owe you."): the pups took over his talk and the lesson,
+    // and with it Thieving, stayed out of reach until the three days with the pups were over
+    if(!U.st && !(quests.pip_lesson && quests.pip_lesson.state === 'done')) return null;
     if(!U.st) return [ S("Oi. Remember Sir Barksalot? He's been busy. Very busy. There's six of them now."), S('A pup? You? Hm.'),
       S('Dad says a dog is for life. I say a dog is for whoever can keep up. Three days. Three jobs.', { type: 'choice', choices: [
         { label: "I'll do it.", onChoose(){ spliceNext(questPopupPage('pup', ['Three days, one job a day.', 'Day 1: walk all six pups. Day 2: sausages from Kurt. Day 3: we will see.'],
@@ -35163,6 +35200,16 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   { const ep0 = enemyPower;
     enemyPower = function(def){ const p = ep0.apply(this, arguments);
       return battle && battle.lvHit > 1 && def === ENEMIES[battle.enemyId] ? p * battle.lvHit : p; }; }
+  // (v168, owner: "laat die wel goed te pakken zijn") Gerald's water lily at the Lily Pool: while the pond needs one, the
+  // lilies come first anywhere in their reach - the frog that knows your name and the fishing water sit right next to
+  // them and the button used to pick those, unless you stood on one of a few spots facing just the right way
+  { const lily = HOTSPOTS.find(h => h.scene === 'fenmire' && Math.abs(h.x - 4.6 * TILE) < 1 && h.avail);
+    const ff0 = fxFocus;
+    if(lily) fxFocus = function(){
+      if(currentScene.id === 'fenmire' && Math.hypot(player.x - lily.x, player.y - lily.y) <= lily.r){ let on = false; try{ on = lily.avail(); }catch(e){}
+        if(on) return { kind: 'hot', obj: lily, d: 0 }; }
+      return ff0.apply(this, arguments); }; }
+
   requestAnimationFrame(frame);
 
   // ---------- HOT RELOAD (state is just player position; nice-to-have) ----------
