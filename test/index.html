@@ -35302,7 +35302,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   SKILL_PACE.crafting = [0.57, 0.36];
   // the Interact button and the plate's first line for the two new stations
   { const ik0 = interactKind; interactKind = function(){ const r = ik0.apply(this, arguments);
-      if(r && r[1] === undefined){ const stn = nearStation(); if(stn && STATION_SKILL[stn.st.kind] === 'crafting') return ['crafting', stn.st.kind === 'wheel' ? 'Throw' : 'Craft']; }
+      if(r && r[1] === undefined){ const stn = nearStation(); if(stn && STATION_SKILL[stn.st.kind] === 'crafting') return ['crafting', 'Craft']; }
       return r; }; }
   { const sm0 = stationMenu; stationMenu = function(){ const r = sm0.apply(this, arguments);
       if(station && STATION_SKILL[station.st.kind] === 'crafting'){ const m = skillPanel.querySelector('.msg'); if(m) m.textContent = station.st.kind === 'wheel' ? 'What shall we throw?' : 'What shall we make?'; }
@@ -35346,6 +35346,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(S.mode === 'done'){ if(now - S.doneAt > 1500){ S.custom = null; S.cr = null; stationMenu(); } else crDraw(now); return; }
       if(C.lifted && !C.done && now - C.lifted > CR_LIFT){ C.lifted = null; crEndPhase(); }
       if(C.phase === 'fire'){ const n = skillPanel.querySelector('.needle'), p = crFirePos(now); if(n) n.style.left = (p * 100) + '%';
+        if(!C.fireOn && now >= C.fireT0){ C.fireOn = true; const ms = skillPanel.querySelectorAll('.msg'); if(ms.length) ms[ms.length - 1].textContent = 'It glows! Take it out when the glow is in the green.'; }
         if(p >= 1) finishRecipe(false, 'It cracked in the kiln. The clay is fine - squash it and try again.'); return; }
       crDraw(now); },
     press(t){ const C = station && station.cr; if(!C || station.mode !== 'play' || popupOpen) return;
@@ -35361,7 +35362,9 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       const C = S.cr;
       if(rc.game === 'stitch'){
         C.pts = crPath(CR_SHAPES[rc.shape], 320); C.hit = C.pts.map(() => false); C.cur = 0; C.dev = 0; C.n = 0;
-        skillPanel.innerHTML = `${head}${cvTag}<div class="msg">Put the needle on the green circle and sew along the dotted line.</div>`;
+        // (owner: the finger hid the needle) the needle starts on the line and follows the finger's movement from wherever you touch
+        C.tip = C.pts[0].slice();
+        skillPanel.innerHTML = `${head}${cvTag}<div class="msg">Touch anywhere and slide your finger: the needle follows it. Sew along the dotted line.</div>`;
         skActBtn.hidden = true;
       } else if(rc.game === 'throw'){
         const P = CR_PROFILES[rc.prof]; C.rows = Math.round(10 + 26 * P.h); C.rowH = 5; C.base = 214; C.max = 112;
@@ -35376,16 +35379,19 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       }
       const cv = skillPanel.querySelector('.crCv');
       if(rc.game !== 'set'){
-        cv.addEventListener('pointerdown', e => { e.preventDefault(); if(C.done) return; C.down = true; C.lifted = null; try{ cv.setPointerCapture(e.pointerId); }catch(_){} crMove(...crPos(cv, e)); });
-        cv.addEventListener('pointermove', e => { const p = crPos(cv, e); if(C.down && !C.done) crMove(...p); else if(!C.done) C.tip = [p[0], p[1] - CR_TIP]; });
+        cv.addEventListener('pointerdown', e => { e.preventDefault(); if(C.done) return; C.down = true; C.lifted = null; try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+          const p = crPos(cv, e); if(C.phase === 'stitch') C.grab = { fx: p[0], fy: p[1], nx: C.tip[0], ny: C.tip[1] }; crMove(...p); });
+        cv.addEventListener('pointermove', e => { const p = crPos(cv, e); if(C.down && !C.done) crMove(...p); else if(!C.done && C.phase !== 'stitch') C.tip = [p[0], p[1] - CR_TIP]; });
         ['pointerup', 'pointercancel'].forEach(t => cv.addEventListener(t, () => { if(C.down && !C.done && C.started){ C.lifted = performance.now(); C.trail.push(null); } C.down = false; }));
       } else cv.addEventListener('pointerdown', e => { e.preventDefault(); crSetPress(performance.now()); });
     }; }
   function crMove(fx, fy){
     const C = station && station.cr; if(!C || C.done) return;
-    const x = fx, y = fy - CR_TIP, prev = C.tip; C.tip = [x, y];
+    let x = fx, y = fy - CR_TIP;
+    if(C.phase === 'stitch'){ const G = C.grab; if(!G) return; x = G.nx + fx - G.fx; y = G.ny + fy - G.fy; }
+    const prev = C.tip; C.tip = [x, y];
     if(C.phase === 'stitch'){
-      if(!C.started){ const [sx, sy] = C.pts[0]; if(Math.hypot(sx - x, sy - y) < 18){ C.started = true; C.hit[0] = true; } else return; }
+      if(!C.started){ C.started = true; C.hit[0] = true; }
       let best = 1e9; for(const [px_, py_] of C.pts){ const d = Math.hypot(px_ - x, py_ - y); if(d < best) best = d; }
       const n = prev && C.trail.length && C.trail[C.trail.length - 1] ? Math.min(20, Math.ceil(Math.hypot(x - prev[0], y - prev[1]) / 4)) : 1;
       for(let i = 1; i <= n; i++) crStitchStep(C, n > 1 ? prev[0] + (x - prev[0]) * i / n : x, n > 1 ? prev[1] + (y - prev[1]) * i / n : y);
@@ -35428,12 +35434,13 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(!stars){ C.done = { score, stars, at: performance.now() }; finishRecipe(false, 'It slumps. Squash it and start again - the clay is fine.'); return; }
       // into the kiln: a glow bar like cooking (raw -> right -> cracked)
       const d = levelDiff(craftLv(), C.rc.lv);
-      C.phase = 'fire'; C.fireT0 = performance.now(); C.zoneW = [0.22, 0.16, 0.12][d] * mastEase('crafting', C.rc.id); C.fireSpeed = [0.3, 0.34, 0.38][d];
+      // (owner: it came very suddenly) the pot goes in first; the glow starts after a moment
+      C.phase = 'fire'; C.fireT0 = performance.now() + 1800; C.zoneW = [0.22, 0.16, 0.12][d] * mastEase('crafting', C.rc.id); C.fireSpeed = [0.3, 0.34, 0.38][d];
       skillPanel.innerHTML = `<div class="t">${ITEMS[C.rc.id].name} <span>Crafting ${craftLv()}</span></div>
         <div class="msg" style="margin:2px 0 6px">${['', 'A bit lopsided, but it stands.', 'Nicely thrown!', 'A perfect shape!'][stars]} Into the kiln...</div>
         <div class="cookbar"><div class="raw">soft</div><div class="zone" style="left:${(0.62 - C.zoneW / 2) * 100}%;width:${C.zoneW * 100}%"></div>
         <div class="perfect" style="left:${(0.62 - 0.03) * 100}%;width:6%"></div><div class="burnt">cracked</div><div class="needle"></div></div>
-        <div class="msg">Take it out when the glow is in the green.</div>`;
+        <div class="msg">The kiln heats up. Wait for the glow...</div>`;
       skActBtn.hidden = false; skActBtn.className = 'red'; skActBtn.textContent = 'Take it out!';
     }
   }
@@ -35441,6 +35448,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   function crFirePress(t){
     const S = station, C = S.cr, p = crFirePos(t), z0 = 0.62 - C.zoneW / 2, z1 = 0.62 + C.zoneW / 2;
     const msgs = skillPanel.querySelectorAll('.msg'), msg = msgs[msgs.length - 1];
+    if(t < C.fireT0){ if(msg) msg.textContent = 'Wait for it to start glowing.'; return; }
     if(p < z0){ if(msg) msg.textContent = 'Still soft. Give it a moment.'; return; }
     if(p > z1){ finishRecipe(false, 'It cracked in the kiln. The clay is fine - squash it and try again.'); return; }
     const fireOk = Math.abs(p - 0.62) <= 0.03;
@@ -35528,7 +35536,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     }
     if(C.lifted && !C.done && C.phase !== 'set'){ const k = (now - C.lifted) / CR_LIFT; g.fillStyle = 'rgba(20,24,36,.6)'; g.fillRect(CR_W / 2 - 60, CR_H - 14, 120, 5);
       g.fillStyle = '#f3d27a'; g.fillRect(CR_W / 2 - 60, CR_H - 14, 120 * Math.max(0, 1 - k), 5); g.font = '18px "Jersey 10", sans-serif'; g.textAlign = 'center';
-      g.strokeStyle = 'rgba(15,20,30,.9)'; g.lineWidth = 3; g.fillStyle = '#fff'; const t = C.phase === 'throw' ? 'Put your finger back to carry on' : 'Put the needle back to carry on';
+      g.strokeStyle = 'rgba(15,20,30,.9)'; g.lineWidth = 3; g.fillStyle = '#fff'; const t = C.phase === 'throw' ? 'Put your finger back to carry on' : 'Touch again to carry on';
       g.strokeText(t, CR_W / 2, CR_H - 22); g.fillText(t, CR_W / 2, CR_H - 22); }
   }
   function crCount(g, u){ g.font = '18px "Jersey 10", sans-serif'; g.textAlign = 'right'; g.fillStyle = '#fff'; g.strokeStyle = 'rgba(15,20,30,.9)'; g.lineWidth = 3;
