@@ -11149,6 +11149,8 @@
             equipment.weapon = 'bronze_sword'; equipment[ITEMS.wooden_shield.slot] = 'wooden_shield'; saveEquipment(); } },
         { speaker, portrait:'npc_smith', text: "Fighting you learn by doing, not by reading. Books don't hit back. Hit things and you get better at hitting them. Get hit and you get tougher." },
         ...combatTutorPages(speaker).filter(p => p.popup),
+        // (the owner: past the wizard before the woods, he teaches magic)
+        ...(knownSpells.includes('fireball') ? [] : [{ speaker, portrait:'npc_smith', text: "One more thing. See Eldrin, our wizard, before you go into those woods. Strange folk are his business, and you're strange folk." }]),
       ];
     }
     const pages = [ { speaker, text: nextLine(npc), portrait: npc.spritePrefix } ];
@@ -20125,7 +20127,8 @@
     try{ localStorage.setItem(GOAL_HINT_KEY, on ? '1' : '0'); if(trackedQuest) localStorage.setItem(TRACK_KEY, trackedQuest); else localStorage.removeItem(TRACK_KEY); }catch(e){}
   }
   const q1Goal = () => inventory.steven_note ? "Bring Steven's note back to Bram in Puddlebottom"
-    : !weaponsGranted ? (mayorHelped ? 'Pick up your gear from Joren, the smith in Puddlebottom' : 'Get some gear first: ask Mayor Ophelia in Puddlebottom for help')
+    : !weaponsGranted ? 'Pick up your gear from Joren, the smith in Puddlebottom'
+    : !knownSpells.includes('fireball') ? 'See Eldrin the wizard in Puddlebottom before the woods'
     : "Bring Bram's parcel to Steven in Brightwood, north through the woods";
   const questRunning = id => { const info = QUEST_INFO[id], q = quests[id];
     return !!(info && q && q.state !== 'done' && q.state !== 'declined' && !(info.hide && info.hide(q))); };
