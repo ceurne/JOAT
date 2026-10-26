@@ -36763,6 +36763,39 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       return keep;
     }; }
   // ==== end v172 home rooms ====
+  // ==== v172 react to hits (tools/blocks/v172_react.js) ====
+  // You react when you are hit, in every fight (panel v172g: "De speler reageert helemaal niet als ie geraakt wordt.
+  // Kunnen we dat nog aanpassen in alle battles?"). The hit already pushed you back 18 px and flashed you white; now you
+  // also recoil: you lean back from your feet, squash a little, are knocked a few pixels further, and flash red between
+  // the white flashes. While a hit on you is fresh (battle.fx 'react', 420 ms) your figure, your blade and your shield are
+  // drawn through the same lean (the blade is drawn before your figure, so it uses the feet of the frame before).
+  let rxFeet = null;
+  const rxHit = () => battle && battle.fx && battle.fx.find(x => x.type === 'react' && x.actor === 'player' && x.hit && battleClock - x.start < 420);
+  function rxLean(f, px, py, scale, fn){
+    const e = battleClock - f.start, env = e < 80 ? e / 80 : Math.max(0, 1 - (e - 80) / 340);
+    ctx.save();
+    ctx.translate(px - 7 * scale * env, py); ctx.rotate(-0.17 * env); ctx.scale(1 + 0.05 * env, 1 - 0.07 * env); ctx.translate(-px, -py);
+    try{ return fn(e); } finally { ctx.restore(); }
+  }
+  { const dpl0 = drawPlayerLayers;
+    drawPlayerLayers = function(dir, pose, px, py, scale){
+      const f = rxHit(), args = arguments, self = this;
+      if(!f){ rxFeet = null; return dpl0.apply(self, args); }
+      rxFeet = [px, py, scale];
+      return rxLean(f, px, py, scale, e => {
+        // the red flash between the white ones
+        if(e < 260 && Math.floor(e / 55) % 2 === 1 && (!ctx.filter || ctx.filter === 'none')) ctx.filter = 'sepia(1) saturate(5) hue-rotate(-50deg) brightness(0.95)';
+        return dpl0.apply(self, args); });
+    }; }
+  { const db0 = drawBattleBlade;
+    drawBattleBlade = function(){ const f = rxHit(), args = arguments, self = this;
+      if(!f || !rxFeet) return db0.apply(self, args);
+      return rxLean(f, rxFeet[0], rxFeet[1], rxFeet[2], () => db0.apply(self, args)); }; }
+  if(typeof n22DrawShield === 'function'){ const sh0 = n22DrawShield;
+    n22DrawShield = function(){ const f = rxHit(), args = arguments, self = this;
+      if(!f || !rxFeet) return sh0.apply(self, args);
+      return rxLean(f, rxFeet[0], rxFeet[1], rxFeet[2], () => sh0.apply(self, args)); }; }
+  // ==== end v172 react to hits ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
