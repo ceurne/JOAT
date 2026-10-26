@@ -9149,6 +9149,8 @@
   }
   function endBattle(outcome){ // 'victory' | 'defeat' | 'flee'
     battleActive = false;
+    // (panel v172k) fights won, for the fighting-styles tip after the third
+    if(outcome === 'victory'){ fightsWon++; try{ localStorage.setItem(FIGHTS_WON_KEY, String(fightsWon)); }catch(e){} }
     if(battle && battle.toolBack && inventory[battle.toolBack]){ equipment.weapon = battle.toolBack; saveEquipment(); }   // the tool back in your hand
     battlePanel.hidden = true;
     updateMenuDock();
@@ -10949,22 +10951,17 @@
   // you over to her mum in words; the intro cutscene and a first talk
   // (intro skipped) share these pages
   function christinaHelloPages(speaker){
+    // (panel v172k: the first minutes shorter, one thing at a time)
     const C = (text, extra) => ({ speaker, portrait:'npc_daughter', text, ...(extra || {}) });
     return [
-      C("Hey - are you okay? You fell right out of the sky, just next to our house!", { type:'choice', choices: [
-        { label: 'I... think so?', onChoose(){ spliceNext(C("You THINK so? You left a dent in the grass. A person-shaped one.")); } },
-        { label: 'Where am I?', onChoose(){ spliceNext(C("Behind our house. In our field. In a person-shaped dent, which you made. Just now.")); } } ] }),
-      C("Here, grab my hand. Up you get... careful. There."),
+      C("Hey - are you okay? You fell right out of the sky, next to our house!", { type:'choice', choices: [
+        { label: 'I... think so?', onChoose(){ spliceNext(C("You left a dent in the grass. A person-shaped one.")); } },
+        { label: 'Where am I?', onChoose(){ spliceNext(C("Behind our house. In a dent you just made. A person-shaped one.")); } } ] }),
       C("I'm Christina. What's your name?", { type:'input', placeholder:'Your name',
         onSubmit(value){
           playerName = value;
           savePlayerName();
-          spliceNext(
-            C(`${value}. I like it. I've never met anyone who fell out of the sky before. Does that happen a lot, where you're from?`, { type:'choice', choices: [
-              { label: 'Not really.', onChoose(){ spliceNext(C("Didn't think so. You looked very surprised on the way down.")); } },
-              { label: 'Only on Tuesdays.', onChoose(){ spliceNext(C("Ha! ...Wait. Is it Tuesday? Mum will know. Mum always knows.")); } } ] }),
-            C("Come on, you have to meet my mum. Voula. She's over by the house."),
-            C("She always knows what to do with people. Even people who fall out of the sky."));
+          spliceNext(C(`${value}. I like it. Come on, my mum Voula is by the house. She always knows what to do.`));
         } }),
     ];
   }
@@ -10977,38 +10974,14 @@
     return [ C(line) ];
   }
   function grandmaPages(speaker, npc){
-    const pages = (grandmaAskedOrigin && npc) ? [ { speaker, portrait:'npc_grandma', text: nextLine(npc) } ] : [
-      { speaker, portrait:'npc_grandma', text: "So you're the one Christina found out in the field." },
-      { speaker, portrait:'npc_grandma', text: "Come closer, let me look at you... Yes. I've seen clothes like yours before, a long, long time ago." },
-      { speaker, portrait:'npc_grandma', text: "There's an old story about travellers who fall through when the world's seams wear thin. I never thought I'd meet one." },
-      { speaker, portrait:'npc_grandma', text: "I don't have all the answers, child. But you're welcome here for as long as it takes to find them." },
-    ];
+    const pages = (grandmaAskedOrigin && npc) ? [ { speaker, portrait:'npc_grandma', text: nextLine(npc) } ] : [];
+    // (panel v172k: shorter, and the question "are you from Thalveil?" left out: it led nowhere)
     if(!grandmaAskedOrigin){
-      pages.push({ speaker, portrait:'npc_grandma', text: "Tell me, child - are you from Thalveil?", type:'choice',
-        choices: [
-          { label:'Yes', onChoose(){
-              grandmaAskedOrigin = true; saveGrandmaAskedOrigin();
-              grandmaSentWizard = true; try{ localStorage.setItem(GRANDMA_WIZARD_KEY, '1'); }catch(e){}
-              const addressed = playerGender === 'female' ? 'girl' : 'boy';
-              // user: she sends you to the wizard on a "yes" too
-              dialogueLines.splice(dialogueLineIdx+1, 0,
-                { speaker, portrait:'npc_grandma', text: `I don't think so, ${addressed}. Nobody from Thalveil has shoes like those.` },
-                { speaker, portrait:'npc_grandma', text: "Either way, you'll want to seek out the wizard in Puddlebottom, the village further down the road. If anyone can help you, it's him." },
-                ...grandmaCareOffer(speaker)
-              );
-            }
-          },
-          { label:'No', onChoose(){
-              grandmaAskedOrigin = true; saveGrandmaAskedOrigin();
-              grandmaSentWizard = true; try{ localStorage.setItem(GRANDMA_WIZARD_KEY, '1'); }catch(e){}
-              dialogueLines.splice(dialogueLineIdx+1, 0,
-                { speaker, portrait:'npc_grandma', text: "Then you'll want to seek out the wizard in Puddlebottom, the village further down the road. If anyone can help you, it's him." },
-                ...grandmaCareOffer(speaker)
-              );
-            }
-          },
-        ]
-      });
+      pages.push(
+        { speaker, portrait:'npc_grandma', text: "So you're the one who fell out of the sky. I've seen clothes like yours before, a long time ago." },
+        { speaker, portrait:'npc_grandma', text: "There's an old story about travellers who fall through when the world's seams wear thin. The wizard in Puddlebottom might know more.",
+          onShow(){ grandmaAskedOrigin = true; saveGrandmaAskedOrigin(); grandmaSentWizard = true; try{ localStorage.setItem(GRANDMA_WIZARD_KEY, '1'); }catch(e){} } },
+        ...grandmaCareOffer(speaker));
     } else {
       pages.push({ speaker, portrait:'npc_grandma', text: "Come to hear more of my stories, have you? I've told you all I know for now, child.", type:'choice', choices: [
         { label: skillTutors.has('foraging') ? 'How does picking work again?' : 'What are you always picking in the garden?', onChoose(){
@@ -11022,7 +10995,7 @@
   function grandmaCareOffer(speaker){
     if(skillTutors.has('foraging')) return [];
     const G = (text, extra) => Object.assign({ speaker, portrait:'npc_grandma', text }, extra || {});
-    return [ G("And before you go: out there you'll have to look after yourself. Let me show you what's good to pick. It could save your life. Or at least your lunch.", { type:'choice', choices: [
+    return [ G("Before you go, let me show you what's good to pick. It could save your life. Or at least your lunch.", { type:'choice', choices: [
       { label: 'Yes please, show me.', onChoose(){ dialogueLines.splice(dialogueLineIdx+1, 0, ...foragingTutorPages(speaker)); } },
       { label: 'Maybe later, Grandma Pizza.', onChoose(){ dialogueLines.splice(dialogueLineIdx+1, 0, G("The offer stands, child. Just ask me what I'm always picking.")); } } ] }) ];
   }
@@ -11032,11 +11005,9 @@
   function fishingTutorPages(speaker){
     const G = text => ({ speaker, portrait:'npc_grandpa', text });
     const pages = [
-      G("First thing: hold the rod. A rod in your bag catches nothing. In your HANDS. Your Skills page can sort that out for you."),
-      G("Face the water and cast. Then you wait. The float bobs a bit - that's nibbling. Nibbles don't count. That's just fish being rude."),
-      G("When it goes right under, strike! Quick as you like. Too early and they swim off laughing. Too late and they're gone."),
-      G("Then reel. Slide your thumb along the bar and the green box follows. Keep the fish in the green. Lose it too long and the line snaps. Like my patience."),
-      G("Roach bite in the pond at home, by Voula's house, and in the Puddlebottom river. Trout and worse live further in. You'll want a better rod for those. And better elbows."),
+      G("Rod in your HANDS, not in your bag. Face the water and cast. When the float goes right under, strike!"),
+      G("Then reel: keep the fish in the green box. Lose it too long and the line snaps. Like my patience."),
+      G("Roach bite in the pond by Voula's house, and in the Puddlebottom river. Trout and worse live further in."),
     ];
     if(!skillTutors.has('fishing')) pages.push({ popup: { kind:'unlock', label:'New skill', title:'Fishing',
       rows: [{ sprite: 'skill_fishing', text: 'Fishing' }, 'See it in Menu > Skills.'] }, onShow(){ learnSkills('fishing'); } }, lessonOffer('fishing'));
@@ -11049,7 +11020,9 @@
   let grandpaCallArmed = true;
   function maybeGrandpaCalls(){
     if(currentScene.id !== 'outdoor'){ grandpaCallArmed = true; return; }
-    if(!grandpaCallArmed || skillTutors.has('fishing') || !q1Started()) return;
+    // (panel v172k) during Bram's errand he only hands you the map; the rod and the lesson wait until the parcel is delivered
+    const wantMap = !inventory.world_map && !window.__noMapPop && q1Started(), wantRod = !skillTutors.has('fishing') && q1.done;
+    if(!grandpaCallArmed || !(wantMap || wantRod)) return;
     if(dialogueActive || popupOpen || shopOpen || cutsceneLocked || battleActive) return;
     // user: Grandma's and Grandpa's lessons ran into each other - he waits
     // until a lesson is over and nobody has been talking for a few seconds
@@ -11073,33 +11046,23 @@
     const line = npc.lines[Math.floor(Math.random()*npc.lines.length)];
     if(weaponsGranted){ if(homeGreet){ homeGreet = false; return [ V(`Welcome home, ${playerName || 'love'}! ` + pickOne(["Shoes off. I just did the floor.", "You look thinner. Sit. Eat.", "Your bed's made. Don't tell Christina I made it."])), V(line) ]; }
       return [ V(line) ]; }
-    const warn = [
-      V("One more thing. See the path going north, past the trees? It leads into the woods. Please don't go in there yet - not without something to fight with."),
-      V("Strange things have been drifting about in those woods lately. Pale, ghostly things. They won't care that you're new here."),
-      V("Take the path east instead. My parents, Christos and Pizza, live down that way, and just past their cottage is Puddlebottom. The folk there will help you find your feet."),
-    ];
     // after the first meeting: a short reminder, not the whole speech again
     if(bwMet.has('voula_met')) return [ V("Still here? Good. East, remember - my parents' cottage, then Puddlebottom. Not the woods.") ];
     markMet('voula_met');
     const name = playerName || 'love';
+    // (panel v172k: "Nu lijkt het alsof het de normaalste zaak van de wereld is dat er iemand uit de lucht komt vallen")
     return [
-      V("Oh! You must be the one who fell out of the sky. Christina's been shouting about you since you landed."),
-      V(`Let me look at you... Two arms, two legs, all the right way round. You were lucky, ${name}.`, { type:'choice', choices: [
-        { label: 'Thank you for helping me.', onChoose(){ spliceNext(V("Don't thank me, I haven't done anything yet. Christina did the helping. I just do the worrying.")); } },
-        { label: 'Do you know how I got here?', onChoose(){ spliceNext(V("Out of the sky, by the look of the grass. As for why... my mother might know. She knows all the old stories.")); } } ] }),
-      V("You're welcome here, you know. Anyone who drops in - literally - gets looked after in this house."),
-      V("So this is your home now, for as long as you need one. The bed on the left is yours. Wipe your feet."),
-      ...warn,
-      V(`And come back and see us, ${name}. Christina will want to hear everything. Twice.`),
+      V("You fell out of the SKY? Christina's been shouting about it since you landed. I thought she was making it up!"),
+      V(`Let me look at you... Two arms, two legs, all the right way round. You were lucky, ${name}. You can stay with us as long as you need. The bed on the left is yours.`),
+      V("Keep out of the woods to the north for now. Take the path east: my parents live that way, and past them is Puddlebottom."),
     ];
   }
   function grandpaPages(npc, speaker){
     const G = text => ({ speaker, portrait:'npc_grandpa', text });
-    if(!skillTutors.has('fishing') && !q1Started()) return [ G(npc.lines[Math.floor(Math.random()*npc.lines.length)]) ];
+    if(!skillTutors.has('fishing') && !q1.done) return [ G(npc.lines[Math.floor(Math.random()*npc.lines.length)]) ];
     if(!skillTutors.has('fishing')){
       return [
-        G("Oi! You there! Running errands for Bram, I hear. For a PIG. Hah. Well, before you go traipsing off anywhere, come here a moment."),
-        G("You've got the look of someone who's never caught a fish in their life. Don't argue. I can tell. It's in the elbows."),
+        G("Oi! You there! Got Bram his pig, I hear. Hah. Come here a moment. You've got the look of someone who's never caught a fish in their life. It's in the elbows."),
         G("Here. My old rod. It's caught more fish than I've had hot dinners, and I've had a LOT of hot dinners."),
         { popup: { kind:'got', title: "Grandpa Christos' Old Rod", rows: [{ item: 'old_rod', text: "Grandpa Christos' Old Rod" }, 'A fishing rod. It creaks, but so does he.'] },
           onShow(){ if(!inventory.old_rod){ inventory.old_rod = 1; saveInventory(); } } },
@@ -11170,18 +11133,21 @@
   function smithPages(npc, speaker){
     const jq = jorenQuestPages(speaker);
     if(jq) return jq;
-    if(!mayorHelped){
+    // (panel v172k: Bram's word is enough; the mayor's still is)
+    if(!mayorHelped && !q1Started()){
       return [{ speaker, portrait:'npc_smith', text: "Need something forged? I don't arm just anyone who wanders in - show me coin, or someone worth listening to vouching for you, and we'll talk." }];
     }
     if(!weaponsGranted){
       weaponsGranted = true; saveWeaponsGranted();
       return [
-        { speaker, portrait:'npc_smith', text: "Ophelia sent word about you. Not who I'd usually arm on my own judgement, but if the mayor vouches for you, that's good enough for me." },
-        { speaker, portrait:'npc_smith', text: "Here - a bronze sword and a wooden shield. Nothing fancy, but they'll keep you breathing out there. Take care of them." },
-        // round 6: the items arrive after he says so (the toast used to come first)
-        { popup: { kind:'got', title: 'From Joren', rows: [{ item: 'bronze_sword', text: 'Bronze Sword' }, { item: 'wooden_shield', text: 'Wooden Shield' }, 'Put them on in Menu > Gear.'] },
-          onShow(){ inventory.wooden_shield = (inventory.wooden_shield||0) + 1; inventory.bronze_sword = (inventory.bronze_sword||0) + 1; saveInventory(); } },
-        ...combatTutorPages(speaker),
+        { speaker, portrait:'npc_smith', text: (mayorHelped ? "Ophelia sent word about you. " : "Bram sent you? ") + "Here - a bronze sword and a wooden shield. Nothing fancy, but they'll keep you breathing out there." },
+        // round 6: the items arrive after he says so (the toast used to come first); (panel v172k) and they go on
+        // straight away: a new player who skipped the Equip button walked into the woods with empty hands
+        { popup: { kind:'got', title: 'From Joren', rows: [{ item: 'bronze_sword', text: 'Bronze Sword' }, { item: 'wooden_shield', text: 'Wooden Shield' }, 'You have them on. Swap gear any time in Menu > Gear.'] },
+          onShow(){ inventory.wooden_shield = (inventory.wooden_shield||0) + 1; inventory.bronze_sword = (inventory.bronze_sword||0) + 1; saveInventory();
+            equipment.weapon = 'bronze_sword'; equipment[ITEMS.wooden_shield.slot] = 'wooden_shield'; saveEquipment(); } },
+        { speaker, portrait:'npc_smith', text: "Fighting you learn by doing, not by reading. Books don't hit back. Hit things and you get better at hitting them. Get hit and you get tougher." },
+        ...combatTutorPages(speaker).filter(p => p.popup),
       ];
     }
     const pages = [ { speaker, text: nextLine(npc), portrait: npc.spritePrefix } ];
@@ -11696,33 +11662,18 @@
 
   function buildPigPages(){
     const B = (text, extra) => say('Balthazar', 'pig', text, extra);
-    const pitch = [
-      B("Listen. You have to get me out of here. That farmer keeps looking at me and licking his lips. Last night he measured me. With a ruler. Then he wrote \"bacon?\" on the barn door."),
-      B("Buy me from him. Please. I'll make it worth your while. I know where a dragon keeps his spare change. Probably."),
-    ];
-    const questions = B("Ask me anything. I've got nothing but time. And mud. So much mud.", { type:'choice', choices: [
-      { label:"What happened to you?", onChoose(){ spliceNext(
-          B("Three weeks ago I tracked a witch into the Fenmire, the swamp past Brightwood. Two hundred silver on her head. I had her cornered in her own hut."),
-          B("Then I made a small remark about her moustache."),
-          B("In my defence, it was a magnificent moustache. Better than my beard. She did not take it as a compliment. One green flash later: bacon on legs."),
-          ...pitch); } },
-      { label:"A witch with a moustache?", onChoose(){ spliceNext(
-          B("Thick as a hedgehog, curled at the ends. I said she could sweep her floor with it. She said I could eat out of a trough. And here we are."),
-          ...pitch); } },
-      { label:"So you're a pig who used to be a hero.", onChoose(){ spliceNext(
-          B("USED to be? I AM a hero. I'm just currently a hero who sleeps in his own filth. Plenty of heroes do that, they just don't talk about it."),
-          ...pitch); } },
-    ]});
+    // (panel v172k: shorter, and "Balthazar mag zich wel iets duidelijker voorstellen, het is niet duidelijk dat hij
+    // betoverd is")
     const intro = [
-      B("Balthazar Bronzebeard, at your service. Adventurer. Monster slayer. Twice runner-up for Adventurer of the Year. Lost both times to a horse."),
-      B("Now look at me. A witch with a moustache did this. I'd rather not talk about it. ...I'll probably talk about it."),   // so the "A witch with a moustache?" choice has something to follow up on
-      questions,
+      B("Don't worry, I'm not really a pig. I'm Balthazar Bronzebeard: adventurer, monster slayer, hero. A man, under all this ham."),
+      B("A witch with a moustache put a spell on me. I made one small remark about the moustache. One green flash later: bacon on legs."),
+      B("Get me out of here. That farmer measured me last night. With a ruler. Buy me from him, please!"),
     ];
     return [
       say('Pig', 'pig', "Daaaaaamn, you smell lovely.", { type:'choice', choices: [
         { label:"Uhmm, thanks?", onChoose(){ spliceNext(say('Pig', 'pig', "Most people just scream. You're already my favourite."), ...intro); } },
         { label:"A talking pig?!", onChoose(){ spliceNext(say('Pig', 'pig', "A talking pig with a very impressive past, thank you very much."), ...intro); } },
-        { label:"(Back away slowly)", onChoose(){ spliceNext(say('Pig', 'pig', "No no no, don't go! I'm not a regular pig, I swear on my beard. Which I no longer have. Long story. Come back!"), ...intro); } },
+        { label:"(Back away slowly)", onChoose(){ spliceNext(say('Pig', 'pig', "No no no, don't go! Come back!"), ...intro); } },
       ]}),
     ];
   }
@@ -11730,15 +11681,15 @@
   function grantParcelAndDirections(){
     giveItemQuiet('parcel');
     spliceNext(
-      say('Bram', 'npc_farmer', "Cross the bridge again, past Grandma Pizza's house, and take a right. Go through the woods and you'll end up in Brightwood."),
-      say('Bram', 'npc_farmer', "There lives a fella called Steven. Barber, surgeon, bit of an alchemist. Bring him this parcel and the pig's yours. And don't open it. It's... medical."),
+      // (panel v172k: the quest tip is on the quest's own card)
       { popup: { kind:'quest', title:'Special Delivery', rows: [
-          { icon:'parcel', text:"Bring Bram's parcel to Steven in Brightwood." }, "Don't open it." ] } },
-      say('Bram', 'npc_farmer', "Oh, and those woods aren't safe for someone empty-handed. Go see Joren, our smith, about some protection. Tell him I sent you, though knowing him, that alone won't be enough.")
+          { icon:'parcel', text:"Bring Bram's parcel to Steven in Brightwood." }, "Don't open it.", 'Menu > Quests shows what to do next.' ] },
+        onShow(){ tipsSeen.add('quest'); try{ localStorage.setItem(TIPS_KEY, JSON.stringify([...tipsSeen])); }catch(e){} } },
+      say('Bram', 'npc_farmer', "The woods have monsters in them, so see Joren, our smith, first. Tell him I sent you. And don't open the parcel. It's... medical.")
     );
   }
   function buildFarmerPages(){
-    const offer = "You can buy him for 5 copper if he's that important to you. Or you do me a favour and deliver this parcel to Brightwood. It's just a short walk through the woods, but they're ridden with monsters and I'm just a simple peasant.";
+    const offer = "Tell you what: take this parcel to Steven in Brightwood and the pig's yours. Through the woods, past Grandma Pizza's. Or 5 copper.";
     const deliverChoice = { label:"I'll deliver your parcel!", onChoose: grantParcelAndDirections };
     const payChoice = { label:"I'll pay you 5 copper.", onChoose(){
         spliceNext(say('Bram', 'npc_farmer', coins >= 5
@@ -11747,11 +11698,9 @@
           : "You don't have a coin on you, you peasant.", { type:'choice', choices: [deliverChoice] }));
       } };
     return [
-      say('Bram', 'npc_farmer', "Lovely pig, aye? Hope he tastes as good as he smells. Which is surprisingly good. Suspiciously good.", { type:'choice', choices: [
+      say('Bram', 'npc_farmer', "Lovely pig, aye? Talks a lot. Talking doesn't make him less of a ham.", { type:'choice', choices: [
         { label:"He's not a pig! He's Balthazar Bronzebeard!", onChoose(){
-            spliceNext(
-              say('Bram', 'npc_farmer', "Oh, I know he talks. Never shuts up about it. 'Hero of the realm', 'slayer of dragons'. Talking doesn't make him less of a ham, though."),
-              say('Bram', 'npc_farmer', offer, { type:'choice', choices: [deliverChoice, payChoice] }));
+            spliceNext(say('Bram', 'npc_farmer', offer, { type:'choice', choices: [deliverChoice, payChoice] }));
           } },
         { label:"He's so tasty I'd like to buy him from you.", onChoose(){
             spliceNext(say('Bram', 'npc_farmer', offer, { type:'choice', choices: [deliverChoice, payChoice] }));
@@ -11822,11 +11771,9 @@
   function woodcuttingTutorPages(speaker){
     const R = text => say(speaker, 'npc_farmer', text);
     const pages = [
-      R("Chopping's easy. Swing the axe, hit the tree, don't hit your foot. Two out of three is a good day."),
-      R("Watch your swing. There's a sweet spot where the axe bites. Hit it there. Dead in the middle's best - that's a proper chop, counts double."),
-      R("Pines and dead trees to start. The oaks are tough old things - you'll want practice first. Spruce in the old woods? Forget it. For now."),
-      R("And don't fret about the trees. They grow back. Faster than you'd think. Nobody knows why. Nobody asks."),
-      R("Axe in your HANDS, mind. Not in your bag. My cousin tried chopping with his bag once. Lovely man. Very few fingers."),
+      R("Swing the axe, hit the tree, don't hit your foot. Two out of three is a good day."),
+      R("There's a sweet spot where the axe bites. Dead in the middle counts double. Pines and dead trees to start."),
+      R("Axe in your HANDS, mind. Not in your bag. My cousin tried chopping with his bag once. Very few fingers."),
     ];
     if(!skillTutors.has('woodcutting')) pages.push({ popup: { kind:'unlock', label:'New skill', title:'Woodcutting',
       rows: [{ sprite: 'skill_woodcutting', text: 'Woodcutting' }, 'See it in Menu > Skills.'] }, onShow(){ learnSkills('woodcutting'); } }, lessonOffer('woodcutting'));
@@ -18829,11 +18776,11 @@
     gear:   { title: 'Your gear', rows: ['Open Menu > Gear to see what you are wearing, and where.',
               'Tap a slot there (or the item in your Inventory) to put something on or take it off.',
               'What you wear shows on you and makes you stronger in fights.'] },
-    battle: { title: 'Your first fight', rows: ['Attack: swing at the enemy. Your weapon and Strength decide the damage.',
-              'Style: what your hits train. Accurate = Attack (hit more often), Aggressive = Strength (hit harder), Defensive = Defence (get hit less).',
-              'Magic and Items: once you know a spell or carry a potion.',
+    battle: { title: 'Your first fight', rows: ['Attack: swing at the enemy.',
               'Flee: try to run. If it fails, the enemy gets a free hit.',
               'HP is your health. Lose it all and you wake up back home.'] },
+    styles: { title: 'Fighting styles', rows: ['Style: what your hits train. Accurate = Attack (hit more often), Aggressive = Strength (hit harder), Defensive = Defence (get hit less).',
+              'Magic and Items: once you know a spell or carry a potion.'] },
     magic:  { title: 'Magic', rows: ['Spells cost MP, the blue bar in a fight.',
               'In a fight, tap Magic and pick Fireball. It never misses.',
               'Your MP fills up again at the start of every fight.'] },
@@ -18855,6 +18802,8 @@
               'Spend it in the shops in Brightwood.'] },
   };
   const TIPS_KEY = 'open_world_tips';
+  const FIGHTS_WON_KEY = 'open_world_fights_won';
+  let fightsWon = 0; try{ fightsWon = +localStorage.getItem(FIGHTS_WON_KEY) || 0; }catch(e){}
   let tipsSeen = new Set();
   try{ tipsSeen = new Set(JSON.parse(localStorage.getItem(TIPS_KEY)) || []); }catch(e){}
   function showTip(id, onClose){
@@ -18883,7 +18832,8 @@
     else if(!tipsSeen.has('gear') && Object.keys(inventory).some(k => inventory[k] > 0 && ITEMS[k] && ITEMS[k].slot)) showTip('gear');
     else if(!tipsSeen.has('magic') && knownSpells.length) showTip('magic');
     else if(!tipsSeen.has('money') && coins > 0) showTip('money');
-    else if(!tipsSeen.has('board') && currentScene.id === 'brightwood') showTip('board');
+    else if(!tipsSeen.has('board') && currentScene.id === 'brightwood' && Math.hypot(player.x - (BOARD_SPOT.c + 0.5) * TILE, player.y - (BOARD_SPOT.r + 1) * TILE) < 3 * TILE) showTip('board');
+    else if(!tipsSeen.has('styles') && fightsWon >= 3) showTip('styles');
     if(tipsSeen.size > seen) lastTipAt = now;
   }
 
@@ -34278,21 +34228,6 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         rows: [{ item: best, text: ITEMS[best].name, btn: { label: 'Equip', cls: 'go', fn(){
             equipment.weapon = best; saveEquipment(); showToast(`Equipped ${ITEMS[best].name}`); closePopup(); } } },
           inHand ? `You're holding your ${inHand.name}. It goes back in your bag.` : `Your hands are empty.`] });
-    }; }
-  // Joren's sword and shield: the "From Joren" card gets a one-tap Equip (a new player who skipped "Menu > Gear"
-  // walked into the woods with empty hands and had to run from every husk)
-  { const qp0 = queuePopup;
-    queuePopup = function(p){
-      if(p && p.title === 'From Joren' && Array.isArray(p.rows) && p.rows.some(r => r && r.item === 'bronze_sword')){
-        const rows = p.rows.filter(r => typeof r !== 'string');
-        const worn = () => equipment.weapon === 'bronze_sword' && equipment[ITEMS.wooden_shield.slot] === 'wooden_shield';
-        const row = () => worn() ? 'You have them on. Swap gear any time in Menu > Gear.'
-          : { item: 'bronze_sword', text: 'Put them on', btn: { label: 'Equip', cls: 'go', fn(){
-              equipment.weapon = 'bronze_sword'; equipment[ITEMS.wooden_shield.slot] = 'wooden_shield'; saveEquipment();
-              showToast('Equipped Bronze Sword and Wooden Shield'); return { rows: [...rows, row()] }; } } };
-        p = Object.assign({}, p, { rows: [...rows, row()] });
-      }
-      return qp0.apply(this, [p, ...[].slice.call(arguments, 1)]);
     }; }
   // the bots: "Thin out the snow wolves on the pass" put the X on Bjorn; it now points at the lower pass, where they are
   { const mf0 = mapFindIn;
