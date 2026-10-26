@@ -35710,9 +35710,34 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   const rangedLv = () => skillLevel('ranged');
   const hasBow = () => { const w = equipment.weapon; return !!(w && ITEMS[w] && ITEMS[w].bow); };
   const bowWood = () => BOW_WOODS[equipment.weapon] || 'plain';
-  // the arrow you shoot next: the best you have and may use
-  const nextArrow = () => ARROWS.find(id => (inventory[id] || 0) > 0 && rangedLv() >= ITEMS[id].arrow.lv) || null;
+  // the order arrows are used in: the ones in your Arrows slot first (panel wish1: "Een vak voor je pijlen"), then the
+  // best you have
+  const arrowOrder = () => { const a = equipment.ammo; return a && ITEMS[a] && ITEMS[a].arrow ? [a].concat(ARROWS.filter(id => id !== a)) : ARROWS; };
+  // the arrow you shoot next: the first in that order you have and may use
+  const nextArrow = () => arrowOrder().find(id => (inventory[id] || 0) > 0 && rangedLv() >= ITEMS[id].arrow.lv) || null;
   const arrowsLeft = () => ARROWS.reduce((t, id) => t + (rangedLv() >= ITEMS[id].arrow.lv ? inventory[id] || 0 : 0), 0);
+  // the Arrows slot (panel wish1: "Een vak voor je pijlen", before the launch): arrows are worn in it; the slot says how many
+  // are left; on the gear screen it is where the Shield slot is while you hold a bow
+  GEAR_SLOTS.ammo = 'Arrows'; if(!('ammo' in equipment)) equipment.ammo = null;
+  for(const id of ARROWS){ const d = ITEMS[id]; d.slot = 'ammo'; d.req = { ranged: d.arrow.lv };
+    Object.defineProperty(d, 'bonusText', { configurable: true, get: () => `${inventory[id] || 0} left` }); }
+  { const rg0 = renderGear;
+    renderGear = function(){
+      const r = rg0.apply(this, arguments);
+      // (with a bow both hands are on it, so the Shield slot is empty anyway: the Arrows slot takes its place; without a bow
+      // it is not shown, the arrows can still be worn from the bag)
+      const cols = document.querySelectorAll('#gearView .doll > .gcol'), right = cols[cols.length - 1];
+      if(!hasBow() || !right || right.querySelector('.rgAmmo') || !right.children[1]) return r;
+      const id = equipment.ammo, def = id && ITEMS[id] && (inventory[id] || 0) > 0 ? ITEMS[id] : null;
+      const el = document.createElement('button'); el.className = 'gslot rgAmmo' + (def ? '' : ' empty') + (gearPick === 'ammo' ? ' picking' : '');
+      if(def) el.appendChild(itemIconCanvas(id, 32)); else { const n = document.createElement('div'); n.className = 'gnone'; el.appendChild(n); }
+      const t = document.createElement('div'); t.className = 'gtxt';
+      t.innerHTML = `<div class="glab">Arrows</div><div class="gname">${def ? def.name : 'Nothing'}</div>${def ? `<div class="gbon">${def.bonusText}</div>` : `<div class="gbon">${hasBow() && arrowsLeft() ? 'Your best arrows are used' : ''}</div>`}`;
+      el.appendChild(t);
+      el.addEventListener('click', () => { gearPick = gearPick === 'ammo' ? null : 'ammo'; renderGear(); });
+      right.replaceChild(el, right.children[1]);
+      return r;
+    }; }
   // leather (panel ranged1: "ook meer damage met leer"): +1 aim per piece, +2 more for the set; +1 damage from two pieces, +1 more for the set
   const rangedAim = () => rangedLv() + (combatStyle === 'accurate' ? 3 : 0) + leatherPieces() + (leatherSet() ? 2 : 0);
   const rangedPower = arrow => Math.round(rangedLv() * 1.7) + ITEMS[equipment.weapon].bow.power + (arrow ? ITEMS[arrow].arrow.power : 0)
@@ -35853,7 +35878,8 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       return;
     }
     const n = Math.min(opt.arrows || 1, arrowsLeft());
-    for(let i = 0, left = n; i < ARROWS.length && left > 0; i++){ const id = ARROWS[i]; if(rangedLv() < ITEMS[id].arrow.lv) continue;
+    const order = arrowOrder();
+    for(let i = 0, left = n; i < order.length && left > 0; i++){ const id = order[i]; if(rangedLv() < ITEMS[id].arrow.lv) continue;
       const take = Math.min(left, inventory[id] || 0); if(!take) continue; inventory[id] -= take; left -= take;
       battle.rgUsed = battle.rgUsed || {}; battle.rgUsed[id] = (battle.rgUsed[id] || 0) + take; }
     saveInventory();
