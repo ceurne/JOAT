@@ -36405,23 +36405,51 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   // the old boar (panel v171m: "Eigen tekening"): "LPC Wild Boar" by BenCreating, daneeklu and Sharm (atlas page p52),
   // facing left; poses from its moves: s (standing), w0-w3 (running), a0-a5 (the tusks). Frame a2 sits a little forward,
   // as its makers advise.
-  ENEMIES.old_boar.drawFn = (cx, cy, scale, pose) => {
+  ENEMIES.old_boar.drawFn = (cx, cy, scale, pose, st) => {
     const m = /^([wa])(\d)$/.exec(pose || ''), name = !m ? 'boar_l_stand' : m[1] === 'w' ? 'boar_l_walk_' + (+m[2] % 4) : 'boar_l_atk_' + Math.min(5, +m[2]);
     if(!MANIFEST[name]) return;
-    const dw = 64 * scale, dh = 64 * scale, k = scale / REF_SCALE, fx = name === 'boar_l_atk_2' ? -6 * scale : 0;
+    const dw = 64 * scale, dh = 64 * scale, fx = name === 'boar_l_atk_2' ? -6 * scale : 0;
     // (panels v172 and v172b: it floated, and stood higher than you) its feet (row 51 of the 64 px picture) on your foot line:
     // the bottom of your 64 px frame is 18 px (at REF_SCALE) below the fighters' line, your feet 2 rows above it
-    const ps = PLAYER_SCALE * 2.3 * BATTLE_ZOOM, feet = cy + 18 * ps / REF_SCALE - 2 * ps;
-    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx + fx, feet - 2 * scale, dw * 0.3, dw * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    const ps = PLAYER_SCALE * 2.3 * BATTLE_ZOOM, feet = cy + 18 * ps / REF_SCALE - 2 * ps, hop = (st && st.hop) || 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx + fx, feet + hop - 2 * scale, dw * 0.3 * (1 - Math.min(0.4, hop / 120)), dw * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    // (panel v172d: "te stijfjes") it leans: st.rot > 0 lifts its head (it faces left), round its hind feet when it rears
+    // (st.piv 'hind'), else round the middle of its feet; standing it breathes
+    const rot = (st && st.rot) || 0, px = cx + fx + (st && st.piv === 'hind' ? 14 * scale : 0);
+    if(rot){ ctx.translate(px, feet); ctx.rotate(rot); ctx.translate(-px, -feet); }
+    if(!m){ const b = 1 + Math.sin(clockNow / 420) * 0.025; ctx.translate(0, feet); ctx.scale(1, b); ctx.translate(0, -feet); }
     drawSprite(name, cx - dw / 2 + fx, feet - 51 * scale, dw, dh);
+    ctx.restore();
   };
   ENEMIES.old_boar.filter = 'none';
-  BATTLE_MOVES.boarCharge = { dur: 1100, impact: 560, log: 'The {name} lowers its head and charges!',
-    sample(t, g){ if(t < 480){ const x = lerp(g.home, g.contact, ease.in(t / 480)); return { x, pose: 'w' + (Math.floor(t / 70) % 4) }; }
-      if(t < 680) return { x: g.contact, pose: 'a' + Math.min(5, 1 + Math.floor((t - 480) / 50)), sx: 1.04 }; const u = seg(t, 680, 1100); return { x: lerp(g.contact, g.home, ease.inOut(u)), pose: 'w' + (Math.floor(t / 90) % 4) }; } };
-  BATTLE_MOVES.boarGore = { dur: 1200, impact: 640, log: 'The {name} hooks at you with its tusks!',
-    sample(t, g){ if(t < 520){ const x = lerp(g.home, g.contact, ease.inOut(t / 520)); return { x, pose: 'w' + (Math.floor(t / 80) % 4) }; }
-      if(t < 800) return { x: g.contact, pose: 'a' + Math.min(5, Math.floor((t - 520) / 47)), hop: Math.sin(seg(t, 520, 800) * Math.PI) * 10 }; const u = seg(t, 800, 1200); return { x: lerp(g.contact, g.home, ease.inOut(u)), pose: 'w' + (Math.floor(t / 90) % 4) }; } };
+  // (panel v172d: "Meer verschil", "de aanvallen zien er ook echt te stijfjes uit") the two moves made unlike each other:
+  // Charge: it paws the ground twice, head down, then bursts across the field bounding stride by stride, leaning in, and
+  // slams into you (dirt flies, the ground shakes), bounces off and trots back.
+  BATTLE_MOVES.boarCharge = { dur: 1700, impact: 860, log: 'The {name} paws the ground, lowers its head and charges!',
+    sample(t, g){
+      if(t < 520){ const u = t / 520, paw = Math.sin(u * Math.PI * 4);
+        return { x: g.home + Math.max(0, paw) * 4, pose: paw > 0 ? 'w1' : 'w3', rot: -0.07, sx: 1.04, sy: 0.96, dust: paw > 0.6 }; }
+      if(t < 820){ const u = seg(t, 520, 820), x = lerp(g.home, g.contact - 4, ease.in(u));
+        return { x, pose: 'w' + (Math.floor(t / 45) % 4), hop: Math.abs(Math.sin(u * Math.PI * 3)) * 9, rot: -0.1, sx: 1.06, dust: true }; }
+      if(t < 980){ const u = seg(t, 820, 980);
+        return { x: g.contact + 6 * Math.sin(u * Math.PI), pose: 'a' + Math.min(5, 2 + Math.floor(u * 3)), rot: -0.12 + u * 0.1, sx: 1.12 - u * 0.1, sy: 0.9 + u * 0.08, dirt: 'big' }; }
+      if(t < 1200){ const u = seg(t, 980, 1200);
+        return { x: lerp(g.contact, g.contact + 40, ease.out(u)), pose: 'a1', hop: Math.sin(u * Math.PI) * 18, rot: 0.12 * Math.sin(u * Math.PI) }; }
+      const u = seg(t, 1200, 1700); return { x: lerp(g.contact + 40, g.home, ease.inOut(u)), pose: 'w' + (Math.floor(t / 100) % 4), hop: Math.abs(Math.sin(u * Math.PI * 4)) * 3 }; } };
+  // Gore: it stalks up slowly, stops close, rears up on its hind legs, then hooks its tusks up into you with a toss of the
+  // head, shakes it, and backs off.
+  BATTLE_MOVES.boarGore = { dur: 1800, impact: 1000, log: 'The {name} rears up and hooks at you with its tusks!',
+    sample(t, g){
+      if(t < 620){ const u = seg(t, 0, 620);
+        return { x: lerp(g.home, g.contact + 14, ease.inOut(u)), pose: 'w' + (Math.floor(t / 130) % 4), rot: -0.04 * Math.sin(t / 60) }; }
+      if(t < 880){ const u = ease.out(seg(t, 620, 880));
+        return { x: g.contact + 14, pose: 'a0', rot: 0.32 * u, piv: 'hind', hop: 4 * u, sy: 1 + 0.04 * u }; }
+      if(t < 1080){ const u = seg(t, 880, 1080);
+        return { x: lerp(g.contact + 14, g.contact - 6, ease.in(u)), pose: 'a' + Math.min(5, 1 + Math.floor(u * 5)), rot: lerp(0.32, -0.18, ease.in(u)), piv: 'hind', hop: 4 * (1 - u), sx: 1 + 0.08 * u }; }
+      if(t < 1340){ const u = seg(t, 1080, 1340);
+        return { x: g.contact - 6, pose: 'a5', rot: 0.12 * Math.sin(u * Math.PI * 4) * (1 - u), dust: u < 0.3 }; }
+      const u = seg(t, 1340, 1800); return { x: lerp(g.contact - 6, g.home, ease.inOut(u)), pose: 'w' + (3 - Math.floor(t / 120) % 4), rot: 0.03 }; } };
   try{ creditsPanel.innerHTML += '<br><br><b>The training ground</b>: the old boar is "LPC Wild Boar" by Benjamin K. Smith (BenCreating), Daniel Eddeland (daneeklu) and Lanea Zimmerman (Sharm), commissioned by Castelonia (CC-BY-SA 3.0 / GPL 3.0, opengameart.org/content/lpc-wild-boar).'; }catch(e){}
   { const ss1 = switchScene;
     switchScene = function(id){ const r = ss1.apply(this, arguments);
