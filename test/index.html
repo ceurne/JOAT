@@ -33471,12 +33471,13 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         farmStep(r.walk); r.x = r.walk.x; r.y = r.walk.y;
         sprites.push({ row: r.y / TILE, draw: () => farmDraw(r.walk, r.x - camX, r.y - camY) });
       } }; }
-  // 2. Bram's hens ("From Bram's hens. They don't know he sells them"): four of them, outside his pen in Puddlebottom
+  // 2. Bram's hens ("From Bram's hens. They don't know he sells them"): four of them, by Bram's house in Puddlebottom
   { const sc = SCENES.village;
     if(sc && typeof PEN !== 'undefined' && MANIFEST.farm_chicken_down_w0){
-      const hx = (PEN.c1 + 4) * TILE, hy = (PEN.r0 + 2.5) * TILE;
+      // (panel v172o: "Zet ze rechts van brams huis") on the grass right of Bram's house (they were on the path east of the pen)
+      const hx = 17.6 * TILE, hy = 3.7 * TILE;
       const ok = (x, y) => !(sc.solid && sc.solid.has(Math.floor(x / TILE) + ',' + Math.floor((y - 4) / TILE)));
-      const hens = [[-1.2, -0.4], [-0.2, 0.5], [0.8, -0.3], [1.4, 0.6]].map(([a, b2]) => farmWalker('chicken', hx + a * TILE, hy + b2 * TILE, 1.4 * TILE, 0.8 * TILE, 18))
+      const hens = [[-1, -0.3], [-0.2, 0.4], [0.6, -0.2], [1, 0.4]].map(([a, b2]) => farmWalker('chicken', hx + a * TILE, hy + b2 * TILE, 1.1 * TILE, 0.6 * TILE, 18))
         .filter(W => ok(W.x, W.y));
       for(const W of hens){ W.hx = hx; W.hy = hy;
         const d = { row: W.y / TILE, worldX: W.x - 16, worldY: W.y - 30, w: 32, h: 30 };
@@ -34917,6 +34918,19 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     if(wet) put('wet'); if(sea) put('sea_d'); if(wet && sea) put('sea_w');
     return c;
   }
+  // (panel v172o: B) where you haven't been, the real map shows faded like old paper over the blank one, instead of the
+  // blank paper alone (the owner: "een groot bruinig vlak"). Done on the pixels, so it looks the same in every browser.
+  function mapFadeBlank(){
+    const W = MG.W, H = MG.H, bg = mapBlank.getContext('2d'), b = bg.getImageData(0, 0, W, H), m = mapImg.getContext('2d').getImageData(0, 0, W, H).data, d = b.data;
+    for(let i = 0; i < d.length; i += 4){
+      if(!m[i + 3]) continue;
+      // grey, a sepia tint, a little lighter and softer, then 55% over the paper
+      const gr = 0.3 * m[i] + 0.59 * m[i + 1] + 0.11 * m[i + 2], v = 128 + (gr * 1.12 - 128) * 0.8;
+      const r = Math.min(255, v * 1.08 + 10), g = Math.min(255, v * 1.04 + 8), bl = Math.min(255, v * 0.94 + 4);
+      d[i] = d[i] * 0.45 + r * 0.55; d[i + 1] = d[i + 1] * 0.45 + g * 0.55; d[i + 2] = d[i + 2] * 0.45 + bl * 0.55;
+    }
+    bg.putImageData(b, 0, 0);
+  }
   function mapLayersSync(){
     // (panel load1: B) the map's pictures are files now, fetched the first time the map is needed
     if(!MAPL.started){ mapLoadLayers(); return; }
@@ -34924,6 +34938,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     const wet = mapWetNow(), sea = mapSeaNow(), key = (wet ? 1 : 0) + (sea ? 2 : 0);
     if(key === MAPL.key) return; MAPL.key = key;
     for(const [layer, cv] of [['map', mapImg], ['sketch', mapSketch], ['blank', mapBlank]]) mapLayerBox(layer, wet, sea, 0, 0, MG.W, MG.H, cv);
+    mapFadeBlank();
     for(const l of MAP_LABELS) if(l[0] === 'desert' && l[1] === -32) l[3] = sea ? 'The Old Sea' : 'The Vanished Sea';
     mapImgReady = 3; mapDirty = true; wwMapRiver.R = null;
   }
@@ -36896,61 +36911,6 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(performance.now() - cardAt > 1500){ cardAt = performance.now(); unlockCard(); player.y += 22; player.dir = 'down'; }
       return true; }; }
   // ==== end v172 unlock ====
-  // ==== v172 reeds (tools/blocks/v172_reeds.js) ====
-  // (panel v172n, the owner: "bij dusty de vijver is waar we het riet zo mooi hadden staan, kunnen we dat nog op de andere
-  // vijvers toepassen?") the same fringe of reed clumps and cattails as round Rosalind's pond (wwPaintReeds), painted into
-  // the ground along the water's edge of the tile ponds: Voula's pond at home and the pond at the training ground. Thick
-  // on the far side and the sides, thin along the near (bottom) edge where you stand to fish.
-  const REED_PONDS = { outdoor: [6, 7, 10, 12], training_ground: [2, 16, 14, 24] };
-  function paintPondReeds(g, sc, box){
-    const [c0, r0, c1, r1] = box;
-    const px = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
-    const OUT = '#1b3418', D = '#2c5326', M = '#3f7a31', L = '#5f9f43', HI = '#8cc45c';
-    // one clump: blades fanning out from a dark base, each outlined on its shady side (as at Rosalind's pond)
-    const clump = (bx, by, n, tall, seed) => {
-      for(let i = 0; i < n; i++){
-        const sp = (i - (n - 1) / 2), lean = sp * 0.35 + (hash2(seed + i, 3) - .5) * .5, hh = Math.max(5, Math.round(tall - Math.abs(sp) * 2.2 - hash2(seed, i) * 3));
-        for(let k = 0; k < hh; k++){ const x = Math.round(bx + sp * 1.2 + lean * k), y = by - k; px(x - 1, y, OUT); px(x, y, k < 2 ? D : k > hh - 3 ? HI : (i % 2 ? M : L)); }
-      }
-      g.fillStyle = OUT; g.fillRect(Math.round(bx - n * .7), by + 1, Math.round(n * 1.4) + 1, 1);
-    };
-    const cattail = (x, by, h) => {
-      for(let k = 0; k < h; k++){ px(x, by - k, k < h - 6 ? M : D); px(x - 1, by - k, OUT); }
-      const y = by - h; g.fillStyle = OUT; g.fillRect(x - 2, y - 1, 4, 7); g.fillStyle = '#5b3a1d'; g.fillRect(x - 1, y, 2, 5); px(x - 1, y, '#80552f'); px(x, y + 4, '#3e2712');
-      px(x, y - 2, D); px(x, y - 3, D);
-    };
-    // the bases: the water's own edge as it is drawn (the blue pixels), so the fringe follows the rounded bank as at
-    // Rosalind's pond: from above down each column, from the sides along each row, a few pixels out onto the bank
-    const X0 = c0 * TILE, Y0 = r0 * TILE, BW = (c1 - c0 + 1) * TILE, BH = (r1 - r0 + 1) * TILE;
-    let img; try{ img = g.getImageData(X0, Y0, BW, BH).data; }catch(e){ return; }
-    const blue = (x, y) => { if(x < 0 || y < 0 || x >= BW || y >= BH) return false; const i = (y * BW + x) * 4; return img[i + 2] > img[i] + 40 && img[i + 2] > img[i + 1] + 10; };
-    const spots = [];
-    for(let x = 2; x < BW; x += 4){ let y = 0; while(y < BH && !blue(x, y)) y++; if(y < BH) spots.push([X0 + x, Y0 + y - 2, 'top']);
-      let y2 = BH - 1; while(y2 >= 0 && !blue(x, y2)) y2--; if(y2 >= 0 && y2 > y + 6) spots.push([X0 + x, Y0 + y2 + 3, 'bottom']); }
-    for(let y = 4; y < BH; y += 5){ let x = 0; while(x < BW && !blue(x, y)) x++; if(x < BW) spots.push([X0 + x - 2, Y0 + y, 'side']);
-      let x2 = BW - 1; while(x2 >= 0 && !blue(x2, y)) x2--; if(x2 >= 0 && x2 > x + 6) spots.push([X0 + x2 + 2, Y0 + y, 'side']); }
-    spots.sort((a, b) => a[1] - b[1]);
-    spots.forEach(([bx, by, side], i) => {
-      const h0 = hash2(bx * 7 + by, 7), h1 = hash2(bx + by * 3, 13);
-      // gaps: some everywhere, most along the near edge, where you fish
-      if(h0 < (side === 'bottom' ? 0.65 : 0.3)) return;
-      const jx = Math.round((h1 - .5) * 3), tall = (side === 'bottom' ? 6 : 9) + Math.floor(h0 * (side === 'bottom' ? 4 : 8));
-      if(side !== 'bottom' && h1 > 0.72) cattail(bx + jx + (h0 > .65 ? 3 : -3), by, tall + 4);
-      clump(bx + jx, by, (side === 'bottom' ? 3 : 4) + Math.floor(h1 * (side === 'bottom' ? 2 : 4)), tall, bx * 31 + by);
-    });
-  }
-  function reedScene(id){
-    const sc = SCENES[id]; if(!sc || sc._reeds) return;
-    const p0 = sc.paint; sc._reeds = true;
-    sc.paint = function(g, W, H){
-      if(p0) p0.call(this, g, W, H); else drawGroundTiles(0, 0, 0, sc.w - 1, 0, sc.h - 1);
-      try{ paintPondReeds(g, sc, REED_PONDS[id]); }catch(e){}
-    };
-  }
-  for(const id in REED_PONDS) reedScene(id);
-  // the training ground's scene is made again whenever something is built there
-  { const td0 = tgDefine; tgDefine = function(){ const r = td0.apply(this, arguments); reedScene('training_ground'); return r; }; }
-  // ==== end v172 reeds ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
