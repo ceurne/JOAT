@@ -37035,6 +37035,110 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       .achRow .achHow{ font-size: 0.86em; opacity: 0.85; }`;
     document.head.appendChild(st); }
   // ==== end v172 achievements ====
+  // ==== v172 daily job (tools/blocks/v172_daily.js) ====
+  // Step 11 of panel wish1, panel after1: a job of the day. Barnaby on Brightwood's square has one bigger job every day
+  // (a new one at midnight): chop or mine or catch or pick a good number of something you have done before, catch a
+  // heavy fish of a kind you have caught, beat some monsters you have beaten, or pick pockets. Only things you can
+  // already do, so the job never sends you somewhere you can't go. Ask him, say yes, do it, tell him: copper and XP, and
+  // every fifth job a gem as well. The count starts when you say yes; it is a quest in Menu > Quests until you hand in.
+  const DAILY_KEY = 'open_world_daily';
+  let daily = (() => { try{ return JSON.parse(localStorage.getItem(DAILY_KEY)) || null; }catch(e){ return null; } })() || { day: null, job: null, total: 0 };
+  const saveDaily = () => { try{ localStorage.setItem(DAILY_KEY, JSON.stringify(daily)); }catch(e){} };
+  const dlyDay = () => new Date().toDateString();
+  const dlyHash = s => { let h = 7; for(const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+  // how many, per gathering skill
+  const DLY_N = { woodcutting: 30, mining: 25, fishing: 20, foraging: 25 };
+  const DLY_VERB = { woodcutting: 'Chop', mining: 'Mine', fishing: 'Catch', foraging: 'Pick' };
+  const dlyThingLv = (skill, id) => skill === 'woodcutting' ? TREE_LV(id) : skill === 'mining' ? ORE_LV(id) : skill === 'foraging' ? PLANT_LV(id) : (FISH[id] || {}).lv || 1;
+  // "Bog Troll" -> "Bog Trolls", "Snapjaw Lily" -> "Snapjaw Lilies", "Snow Wolf" -> "Snow Wolves"
+  const dlyPlural = n => /[^aeiou]y$/.test(n) ? n.slice(0, -1) + 'ies' : /(s|sh|ch|x)$/.test(n) ? n + 'es' : /f$/.test(n) ? n.slice(0, -1) + 'ves' : /man$/.test(n) ? n.slice(0, -3) + 'men' : n + 's';
+  const dlyPay = L => ({ coins: 30 + 3 * L, xp: 60 + 10 * L });
+  // every job you could get today: built from what you have done before
+  function dlyChoices(){
+    const out = [];
+    for(const skill of Object.keys(DLY_N)){
+      // what you have gathered (the mastery tally), or had in your bag (the Collection Book), that this skill gathers
+      const page = bookPage({ woodcutting: 'wood', mining: 'ores', fishing: 'fish', foraging: 'plants' }[skill]), own = page ? page.items() : [];
+      const done = [...new Set([...Object.keys(mastery).filter(k => k.startsWith(skill + ':') && mastery[k] > 0).map(k => k.slice(skill.length + 1)),
+        ...own.filter(id => book.items[id] > 0)])].filter(id => ITEMS[id] && own.includes(id) && skillLevel(skill) >= dlyThingLv(skill, id));
+      // the three hardest things of the skill you have done
+      done.sort((a, b) => dlyThingLv(skill, b) - dlyThingLv(skill, a));
+      for(const id of done.slice(0, 3)){ const L = dlyThingLv(skill, id);
+        out.push({ id: `g_${skill}_${id}`, kind: 'gather', skill, thing: id, n: DLY_N[skill], L,
+          text: `${DLY_VERB[skill]} ${DLY_N[skill]} ${ITEMS[id].name}`, ...dlyPay(L) }); }
+    }
+    // a heavy fish: two thirds of the way from the lightest to the heaviest of its kind (about one catch in five)
+    for(const id of Object.keys(FISH_KG)) if(book.kg[id] !== undefined && ITEMS[id]){ const r = FISH_KG[id], kg = Math.round((r[0] + (r[1] - r[0]) * 0.66) * 10) / 10, L = (FISH[id] || {}).lv || 1;
+      out.push({ id: `kg_${id}`, kind: 'kg', skill: 'fishing', thing: id, kg, n: 1, L, text: `Catch a ${ITEMS[id].name} of ${kgText(kg)} or more`, ...dlyPay(L + 5) }); }
+    // monsters you have beaten that are still a fight for you (no bosses)
+    const bossIds = Object.values(BOSSES).map(B => B.enemy).concat(['ice_golem', 'sand_bull']);
+    for(const e of Object.keys(book.mon)) if(book.mon[e] > 0 && ENEMIES[e] && !ENEMIES[e].boss && !bossIds.includes(e) && ENEMY_LV[e] && ENEMY_LV[e] >= combatLevel() - 15){ const L = ENEMY_LV[e];
+      out.push({ id: `m_${e}`, kind: 'hunt', skill: 'hitpoints', thing: e, n: 5, L, text: `Beat 5 ${dlyPlural(ENEMIES[e].name)}`, ...dlyPay(L) }); }
+    if(Object.keys(mastery).some(k => k.startsWith('thieving:') && mastery[k] > 0)){ const L = skillLevel('thieving');
+      out.push({ id: 'pockets', kind: 'gather', skill: 'thieving', thing: null, n: 15, L, text: 'Pick 15 pockets or stalls', ...dlyPay(L) }); }
+    return out.sort((a, b) => a.id < b.id ? -1 : 1);
+  }
+  // today's job: the same all day, picked from the list by the date
+  function dlyToday(){
+    if(daily.day === dlyDay() && daily.job) return daily.job;
+    const L = dlyChoices(); if(!L.length) return null;
+    const j = L[dlyHash(dlyDay()) % L.length];
+    daily.day = dlyDay(); daily.job = { ...j, c: 0, state: 'offer' }; saveDaily();
+    if(quests.daily && quests.daily.state !== 'done'){ delete quests.daily; saveQuests(); }
+    return daily.job;
+  }
+  const dlyOn = () => daily.day === dlyDay() && daily.job && daily.job.state === 'active';
+  function dlyCount(n){
+    const j = daily.job; if(!dlyOn()) return;
+    j.c = Math.min(j.n, (j.c || 0) + n); saveDaily();
+    if(j.c >= j.n){ j.state = 'ready'; saveDaily(); quests.daily = { state: 'active', ready: true }; saveQuests();
+      setTimeout(() => showToast("Job of the day done! Tell Barnaby on Brightwood's square."), 600); }
+    else if(j.kind !== 'gather' || j.c % 5 === 0) showToast(`Job of the day: ${j.c}/${j.n}`);
+  }
+  // the counts: every gathered thing (the mastery tally), every win (the Collection Book), every weighed fish
+  { const ma0 = mastAdd;
+    mastAdd = function(skill, thing){ const tut = tutTry(skill), r = ma0.apply(this, arguments);
+      const j = daily.job; if(!tut && dlyOn() && j.kind === 'gather' && j.skill === skill && (j.thing === null || j.thing === thing)) dlyCount(1);
+      return r; }; }
+  { const bm0 = bookMon;
+    bookMon = function(id){ const r = bm0.apply(this, arguments);
+      const j = daily.job; if(dlyOn() && j.kind === 'hunt' && j.thing === id) dlyCount(1);
+      return r; }; }
+  { const fw0 = fishWeigh;
+    fishWeigh = function(id){ const r = fw0.apply(this, arguments);
+      const j = daily.job; if(r && dlyOn() && j.kind === 'kg' && j.thing === id && r.kg >= j.kg) dlyCount(1);
+      return r; }; }
+  QUEST_INFO.daily = { title: "Barnaby's Job of the Day", giver: 'Barnaby',
+    goal: () => { const j = daily.job; if(!j || daily.day !== dlyDay()) return "Yesterday's job ran out. Ask Barnaby on Brightwood's square for today's.";
+      return j.state === 'ready' ? `${j.text}: done! Tell Barnaby on Brightwood's square.` : `${j.text} (${j.c || 0}/${j.n}), then tell Barnaby on Brightwood's square. Today only.`; },
+    hide: q => q.state === 'done' };
+  const DLY_GEMS = ['gem_opal', 'gem_ruby', 'gem_sapphire'];
+  function dlyHandIn(S){
+    const j = daily.job; j.state = 'done'; daily.total = (daily.total || 0) + 1; saveDaily();
+    quests.daily = { state: 'done' }; saveQuests();
+    addCoins(j.coins); gainSkillXp({ [j.skill]: j.xp });
+    const rows = [{ icon: 'coin', text: `+${formatMoney(j.coins)}` }, `+${j.xp} ${SKILLS[j.skill].name} XP`];
+    // every fifth job: a gem as well
+    if(daily.total % 5 === 0){ const g = DLY_GEMS[daily.total / 5 % DLY_GEMS.length]; if(ITEMS[g]){ inventory[g] = (inventory[g] || 0) + 1; saveInventory(); rows.push({ item: g, text: `+ ${ITEMS[g].name}: every fifth job` }); } }
+    rows.push(`Jobs of the day done: ${daily.total}. A new one tomorrow.`);
+    spliceNext(S('HEAR YE! The stranger has done the job of the day! Pay the stranger! ...Oh. That\'s me. Here.'),
+      { popup: { kind: 'done', title: "Barnaby's Job of the Day", rows } });
+  }
+  { const tp = TOWN.npc_barnaby && TOWN.npc_barnaby.topics;
+    if(TOWN.npc_barnaby) TOWN.npc_barnaby.topics = (S, npc) => [...(tp ? tp(S, npc) : []), { label: 'Any big job today?', onChoose(){
+      const j = dlyToday();
+      if(!j){ spliceNext(S("A big job? For you? Go and learn something first! Chop a tree! Catch a fish! Then ask me again!")); return; }
+      if(j.state === 'done'){ spliceNext(S("You did today's job already! HEAR YE! Come back tomorrow! Not before! I sleep in.")); return; }
+      if(j.state === 'ready'){ dlyHandIn(S); return; }
+      if(j.state === 'active'){ spliceNext(S(`HEAR YE! The stranger is working on it! ${j.text}! So far: ${j.c || 0} of ${j.n}! Hurry, it's only for today!`)); return; }
+      spliceNext({ ...S(`HEAR YE! The job of the day! ${j.text}! Today only! Pays ${formatMoney(j.coins)} and a bit of ${SKILLS[j.skill].name} XP!`), type: 'choice', choices: [
+        { label: "I'll do it.", onChoose(){ j.state = 'active'; j.c = 0; saveDaily(); quests.daily = { state: 'active' }; saveQuests();
+          spliceNext(S("HEAR YE! The stranger said yes! Everybody heard it! No backing out now!"), questPopupPage('daily', [QUEST_INFO.daily.goal(), `Reward: ${formatMoney(j.coins)} and ${j.xp} ${SKILLS[j.skill].name} XP`])); } },
+        { label: 'Not today.', onChoose(){ spliceNext(S("Not today! HEAR YE! The stranger is having a lie-in!")); } } ] });
+    } }]; }
+  // a job left from yesterday goes from the quest list
+  if(quests.daily && quests.daily.state !== 'done' && daily.day !== dlyDay()){ delete quests.daily; saveQuests(); }
+  // ==== end v172 daily job ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
