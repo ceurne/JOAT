@@ -34347,22 +34347,36 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         try{ localStorage.setItem(TP_KEY, JSON.stringify(tpState)); }catch(e){}
       }
       return r; }; }
-  // ---------- a gold "!" over people with a new quest (answers_m9: "teken") ----------
+  // ---------- a red "!" over people with a new quest (answers_m9: "teken"; panel v172o red, v172p A) ----------
   // One row per quest: who gives it and when they would offer it if you talked to them now (the same tests their own
   // talk uses). It goes as soon as the quest is taken. Hotspot starts (Glint's nest, the skating ice) are not people.
+  // The marker: a rounded light brown bubble with a little tail, the mark lit from the top left with a soft shadow
+  // (drawn in tools/art/qmark_bubbles.js, shape a).
   const QMARK = (() => {
-    const OUT = '#2a1a10', CREAM = '#fbf1d6', CREAM2 = '#e3d2a8', GOLD = '#f4c542', GOLD2 = '#c98e1c', GOLD3 = '#fff2a8';
-    const cv = document.createElement('canvas'); cv.width = 14; cv.height = 17; const g = cv.getContext('2d');
-    const P = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
-    for(let y = 1; y < 14; y++) for(let x = 1; x < 13; x++){ if((x === 1 || x === 12) && (y === 1 || y === 13)) continue; P(x, y, y < 10 ? CREAM : CREAM2); }
-    for(let x = 2; x < 12; x++){ P(x, 0, OUT); P(x, 14, OUT); }
-    for(let y = 2; y < 13; y++){ P(0, y, OUT); P(13, y, OUT); }
-    for(const [x, y] of [[1, 1], [12, 1], [1, 13], [12, 13], [6, 15], [7, 15], [6, 16]]) P(x, y, OUT);
-    P(6, 14, CREAM2); P(7, 14, CREAM2);
-    for(let y = 3; y < 9; y++){ P(6, y, y < 7 ? GOLD3 : GOLD); P(7, y, y > 4 ? GOLD2 : GOLD); }
-    P(6, 2, OUT); P(7, 2, OUT);
-    for(const [x, y] of [[6, 10], [7, 10], [6, 11], [7, 11]]) P(x, y, GOLD);
-    P(6, 10, GOLD3); P(7, 11, GOLD2);
+    const COL = { o: '#3d2412', 1: '#f3dcb0', 2: '#e1bd85', 3: '#cc9f63', 4: '#b0824a', h: '#ff8f7f', R: '#e8352b', d: '#b21e1d', D: '#701012' };
+    const ART = [
+      '....oooooooooo....',
+      '...o1111111112o...',
+      '..o111111111124o..',
+      '.o111111hR122224o.',
+      'o111111hRRd222224o',
+      'o111112hRRd222224o',
+      'o111222hRRd222224o',
+      'o1222222Rd3222224o',
+      'o1222222Rd3222234o',
+      'o1222222233223334o',
+      'o1222222hR2333334o',
+      'o122222hRRd333344o',
+      'o422223RRdd334444o',
+      '.o423333dD344444o.',
+      '..o433333434444o..',
+      '...o4444444444o...',
+      '....ooo144oooo....',
+      '......o14o........',
+      '......o4o.........',
+      '.......o..........'];
+    const cv = document.createElement('canvas'); cv.width = ART[0].length; cv.height = ART.length; const g = cv.getContext('2d');
+    ART.forEach((row, y) => [...row].forEach((ch, x) => { if(COL[ch]){ g.fillStyle = COL[ch]; g.fillRect(x, y, 1, 1); } }));
     return cv; })();
   const qmDone = id => !!(quests[id] && quests[id].state === 'done');
   const QM_GIVERS = [
@@ -34432,7 +34446,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   }
   function drawQmark(x, y){
     const bob = Math.round(Math.sin(clockNow / 260) * 1.5);
-    ctx.drawImage(QMARK, Math.round(x - 7 * QMARK_PX), Math.round(y - 17 * QMARK_PX + bob), 14 * QMARK_PX, 17 * QMARK_PX);
+    ctx.drawImage(QMARK, Math.round(x - 9 * QMARK_PX), Math.round(y - QMARK.height * QMARK_PX + bob), QMARK.width * QMARK_PX, QMARK.height * QMARK_PX);
   }
   function drawQuestMarks(camX, camY){
     if(!currentScene || !currentScene.npcs || battleActive || tpFx || window.__noQmark) return;
