@@ -8031,7 +8031,7 @@
     // are the eq_* overlay piece prefixes drawn on the player while it's
     // equipped (see drawPlayerLayers), `bonus` feeds the combat math.
     wooden_shield: { name: 'Wooden Shield', icon: 'item_wooden_shield',
-      slot: 'shield', layers: { front: ['shield_{g}_fg'] }, bonus: { armor: 1 }, bonusText: '-1 damage taken' },
+      slot: 'shield', layers: { front: ['shield_{g}_fg'] }, bonus: { armor: 1 }, bonusText: '-1 damage taken', desc: 'Carved from oak. Splinters included' },
     bronze_sword:  { name: 'Bronze Sword',  icon: 'item_bronze_sword', desc: 'A plain bronze blade. It does the job',
       slot: 'weapon', layers: { back: ['sword_bg'], front: ['sword_fg'] }, bonus: { damage: 2 }, bonusText: '+2 attack damage',
       blade: { outline: '#2a1a12', grip: '#5a3a1a', guard: '#8a4a2a', body: '#d0784a', hi: '#f6c09a' } },   // v132: the bronze tier is copper-coloured (user's metal pick)
@@ -8227,7 +8227,8 @@
     wooden_bowl:   { name: 'Wooden Bowl', icon: 'item_wooden_bowl', desc: 'Carved by you. It holds soup' },
     wooden_float:  { name: 'Carved Float', icon: 'item_wooden_float', desc: 'Carved by you. Fish bite a little sooner with it in your bag' },
     toy_pig:       { name: 'Toy Pig', icon: 'item_toy_pig', desc: 'A little wooden pig. It looks a lot like someone' },
-    wooden_shield: { name: 'Wooden Shield', icon: 'item_wooden_shield', slot: 'shield', bonus: { defence: 1 }, bonusText: '+1 defence', desc: 'Carved from oak. Splinters included' },
+    // (27 Oct, the owner: "Ik zie die shield ook niet als ik hem equipped heb") a second wooden_shield here, without its picture
+    // and with a bonus the fights don't read, replaced the one above; its line is merged into that one
     walking_stick: { name: 'Walking Stick', icon: 'item_walking_stick', desc: 'A fine oak stick. Grandpa says he does not need one' },
     wooden_balthazar: { name: 'Wooden Balthazar', icon: 'item_wooden_balthazar', desc: 'A life-size Balthazar in yew. The real one is not amused' },
     pizza_pike:    { name: "Grandma's Pike", icon: 'item_pizza_pike', desc: 'Caught by Grandma Pizza in 1987. Bigger than anything Grandpa ever caught. Nobody mentions it' },
@@ -11815,13 +11816,14 @@
     if(inventory.steven_note){
       if(currentScene === SCENES.village) pigHoldAt(player.x);
       const handover = [
-        narrate("Bram opens the gate of the pig pen. Balthazar squeezes under the fence, which is a lot less dignified than it sounds."),
+        // (the owner, 27 Oct: "Balthazar moet wel de omheining uit komen tijdens het gesprek") he comes out now, while they talk
+        { ...narrate("Bram opens the gate of the pig pen. Balthazar squeezes under the fence, which is a lot less dignified than it sounds."), onShow(){ if(!companion) joinBalthazar(); companion.walkOut = true; } },
         R("Take him. Honestly, it's a relief. He talks in his sleep. About moustaches."),
         say('Balthazar', 'pig', "FREEDOM! Smell you later, you sausage-eyed peasant!"),
         R("See? That's what I've had to put up with."),
         { popup: { kind:'done', title:'Special Delivery', rows: [
             { icon:'pig', text:'Balthazar joined your party!' }, 'He will comment on everything. Everything.' ] },
-          onShow(){ takeItem('steven_note'); q1.done = true; saveQ1(); joinBalthazar(); } },
+          onShow(){ takeItem('steven_note'); q1.done = true; saveQ1(); if(!companion) joinBalthazar(); } },
         ...(skillTutors.has('woodcutting') ? [] : [bramAxeOffer(speaker)]),
       ];
       const choices = [
@@ -13892,7 +13894,9 @@
     return cands[0] || null;
   }
   const nearBlock = () => currentScene.id === CHOP_BLOCK.scene && Math.hypot(player.x - (CHOP_BLOCK.c + 0.5) * TILE, player.y - (CHOP_BLOCK.r + 0.85) * TILE) < 46;
-  const BLOCK_DEF = { name: "Bram's chopping block", log: 'logs', lv: 1, xp: 15, need: 3, speed: 1.0, block: true };
+  // (the owner, 27 Oct: "Op het hakblok moet je minder xp krijgen") 15 -> 8: no walking and no waiting for a tree, so it
+  // gave more than a pine for the same work
+  const BLOCK_DEF = { name: "Bram's chopping block", log: 'logs', lv: 1, xp: 8, need: 3, speed: 1.0, block: true };
   function tryStartChopping(){
     if(chopping || fishing) return false;
     const blk = nearBlock() && { c: CHOP_BLOCK.c, r: CHOP_BLOCK.r, t: -1, dx: (CHOP_BLOCK.c + 0.5) * TILE - player.x, dy: (CHOP_BLOCK.r + 0.85) * TILE - player.y };
@@ -17351,8 +17355,12 @@
     wexleyGateRunning = true;
     markMet('wexley_gate');
     w.state = 'idle'; w.moving = false;
-    w.dir = player.x < w.x - 8 ? 'left' : (player.y > w.y ? 'down' : 'up');
     const W = (text, extra) => say('Wexley', 'npc_wexley', text, extra);
+    // (the owner, 27 Oct: "leuk als wexley echt voor je komt te staan en z'n halberd naar beneden doet") he steps out from
+    // beside the road to stand right in front of you, the halberd across your way, and goes back to his post afterwards
+    const post = { x: w.x, y: w.y, speed: w.speed };
+    player.moving = false; player.dir = 'up'; cutsceneLocked = true;
+    npcWalkTo(w, player.x, player.y - 30, 70).then(() => { w.dir = 'down'; w.state = 'idle'; w.moving = false; cutsceneLocked = false;
     startCutscene([
       narrate("A guard at the gate steps into your path and lowers his halberd. Onto your toes."),
       W("HALT! State your name, your business, and whether you've got any snacks.", { type:'choice', choices: [
@@ -17365,7 +17373,7 @@
       W("Welcome to Brightwood. There's a toll of one copper."),
       narrate("A long pause. He watches you check your pockets."),
       W("I'm joking. I just like watching people check their pockets. Go on in."),
-    ], () => { wexleyGateRunning = false; });
+    ], () => { wexleyGateRunning = false; npcWalkTo(w, post.x, post.y, 60).then(() => { releaseNpcScript(w, post.speed); w.dir = 'down'; }); }); });
   }
 
   // Town criers and street sellers call out now and then (speech bubbles).
@@ -17457,6 +17465,7 @@
   }
   function updateCompanion(dt){
     if(!companion) return;
+    if(companion.walkOut && !dialogueActive && !popupOpen) companion.walkOut = false;
     if(makeWay(companion, dt)){ companion.moving = true; return; }
     const c = companion, tr = c.trail;
     const last = tr.length ? tr[tr.length-1] : { x: c.x, y: c.y };
@@ -20398,6 +20407,8 @@
     if(dialogueActive || popupOpen || shopOpen || menuIsOpen()){
       tickDialogueReveal(dt);
       player.moving = false; player.frame = 0; player.frameTimer = 0;
+      // (27 Oct) Balthazar walks out of the pen to your side while Bram hands him over
+      if(companion && companion.walkOut) updateCompanion(dt);
     } else {
       // `cutsceneLocked` is the same freeze as dialogueActive but for the
       // gap *between* dialogue boxes in a scripted sequence (the player
@@ -24457,7 +24468,13 @@
   const mapGrandpaPrev = grandpaPages;
   grandpaPages = function(npc, speaker){
     const pages = mapGrandpaPrev(npc, speaker);
-    return inventory.world_map || window.__noMapPop ? pages : [...mapGiftPages(speaker), ...pages];
+    if(inventory.world_map || window.__noMapPop) return pages;
+    // (the owner, 27 Oct: "Grandpa geeft je nu gelijk de map zonder dat je een gesprek met hem gevoerd hebt") during Bram's
+    // errand, the first time you meet him: he says who he is first, and the map is all he has for you now
+    if(!q1.done && !skillTutors.has('fishing')){ const [, ...rest] = mapGiftPages(speaker), G = text => ({ speaker, portrait: 'npc_grandpa', text });
+      return [G("Oi! You there! You must be the one who fell out of the sky. I'm Christos, Voula's father. Running errands for Bram already, I hear. For a PIG. Hah."),
+        G("Before you go: you've got the look of someone who gets lost walking to the privy. Take this."), ...rest]; }
+    return [...mapGiftPages(speaker), ...pages];
   };
   // older saves that already met Grandpa get the map in the post, at a quiet moment
   let mapPostAt = 0;
