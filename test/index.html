@@ -5458,7 +5458,7 @@
       const e = (now - screenFlicker) / 1300, a = Math.max(0, Math.sin(e * Math.PI * 6)) * (1 - e) * 0.85;
       ctx.save(); ctx.fillStyle = `rgba(235,245,255,${a})`; ctx.fillRect(0, 0, viewW, viewH); ctx.restore();
     }
-    if(aimShots.length && currentScene.id === 'village') drawAimShots(camX, camY, now);
+    if(aimShots.length && (currentScene.id === 'village' || currentScene.id === 'training_ground')) drawAimShots(camX, camY, now);
     if(perfectBanner && now - perfectBanner.t < 1600 && !popupOpen){
       const e = now - perfectBanner.t, pop = e < 160 ? 0.6 + e / 400 : 1;
       ctx.save(); ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.globalAlpha = e < 1200 ? 1 : 1 - (e - 1200) / 400;
@@ -11066,7 +11066,7 @@
     const name = playerName || 'love';
     // (panel v172k: "Nu lijkt het alsof het de normaalste zaak van de wereld is dat er iemand uit de lucht komt vallen")
     return [
-      V("You fell out of the SKY? Christina's been shouting about it since you landed. I thought she was making it up!"),
+      V("Was that you? I heard the thump from here. Christina says you fell out of the sky!"),
       V(`Let me look at you... Two arms, two legs, all the right way round. You were lucky, ${name}. You can stay with us as long as you need. The bed on the left is yours.`),
       V("Keep out of the woods to the north for now. Take the path east: my parents live that way, and past them is Puddlebottom."),
     ];
@@ -11154,7 +11154,10 @@
     if(!weaponsGranted){
       weaponsGranted = true; saveWeaponsGranted();
       return [
-        { speaker, portrait:'npc_smith', text: (mayorHelped ? "Ophelia sent word about you. " : "Bram sent you? ") + "Here - a bronze sword and a wooden shield. Nothing fancy, but they'll keep you breathing out there." },
+        // (panel v172n) not so fast: Bram's word, and a look at you first
+        ...(mayorHelped ? [] : [{ speaker, portrait:'npc_smith', text: "Bram sent you? Into the woods, with that parcel? Hm. Let's have a look at you." },
+          { speaker, portrait:'npc_smith', text: "Arms like wet string. Well, everyone starts somewhere." }]),
+        { speaker, portrait:'npc_smith', text: (mayorHelped ? "Ophelia sent word about you. " : "") + "Here - a bronze sword and a wooden shield. Nothing fancy, but they'll keep you breathing out there." },
         // round 6: the items arrive after he says so (the toast used to come first); (panel v172k) and they go on
         // straight away: a new player who skipped the Equip button walked into the woods with empty hands
         { popup: { kind:'got', title: 'From Joren', rows: [{ item: 'bronze_sword', text: 'Bronze Sword' }, { item: 'wooden_shield', text: 'Wooden Shield' }, 'You have them on. Swap gear any time in Menu > Gear.'] },
@@ -11203,27 +11206,29 @@
       return pages;
     }
     const P = 'npc_wizard';
-    // (panel v172l: "korter") five pages: what you are, Fireball, mana, and (panel magic1, A) leather before metal
+    // (panel v172l: "korter", v172n: "gaat wel heel snel") seven pages: what you are, the spark, Fireball, mana, and (panel
+    // magic1, A) leather before metal
     const teachFireball = () => {
       learnSpell('fireball');
       showToast('You learned Fireball!');
       dialogueLines.splice(dialogueLineIdx+1, 0,
-        { speaker, portrait:P, text: "Hold out your hand. Picture a spark... now feed it. There - Fireball." },
+        { speaker, portrait:P, text: "Hold out your hand. Picture a spark... now feed it. Slowly. Let it grow." },
+        { speaker, portrait:P, text: "There - Fireball. The simplest spell there is, and still enough to make most things think twice." },
         { speaker, portrait:P, text: "Magic drains you, so save it for when a fight turns against you. Cast often and it grows: more mana, and spells that bite harder." },
         { speaker, portrait:P, text: "Wear leather, not metal. Metal spoils your aim. And don't practise indoors. I lost a very good hat that way." },
         ...magicTutorPages(speaker).filter(p => p.popup)
       );
     };
-    const offer = reply => ({ speaker, portrait:P, text: reply + " Shall I teach you to use it?", type:'choice',
-      choices: [ { label:"Teach me.", onChoose(){ teachFireball(); } }, { label:"Me? Use magic?", onChoose(){ teachFireball(); } } ] });
-    const senses = (reply) => () => { dialogueLines.splice(dialogueLineIdx+1, 0, offer(reply)); };
+    const offer = { speaker, portrait:P, text: "Magic like that doesn't cling to just anyone. I could teach you to shape it. Would you like that?", type:'choice',
+      choices: [ { label:"Teach me.", onChoose(){ teachFireball(); } }, { label:"Me? Use magic?", onChoose(){ teachFireball(); } } ] };
+    const senses = (reply) => () => { dialogueLines.splice(dialogueLineIdx+1, 0, { speaker, portrait:P, text: reply }, offer); };
     return [
       { speaker, portrait:P, text: "Hm. Come closer, traveller. Something about you doesn't sit quite right with this place.", type:'choice',
         choices: [
           { label:"I'm not from here. I don't even know how I got here.", onChoose: senses(
-              "No... you're not from here. There's magic on you, raw and unshaped. It came through with you.") },
+              "No... you're not from here. I can feel it on you: magic, raw and unshaped, clinging to you like mist. It came through with you.") },
           ...(grandmaSentWizard ? [{ label:"Grandma Pizza said you might help. I'm not from around here.", onChoose: senses(
-              "She was right to send you. There's magic on you, raw and unshaped. It came through with you.") }] : []),
+              "She was right to send you. I can feel it on you: magic, raw and unshaped, clinging to you like mist. It came through with you.") }] : []),
         ]
       },
     ];
@@ -11673,7 +11678,7 @@
     const intro = [
       B("Don't worry, I'm not really a pig. I'm Balthazar Bronzebeard: adventurer, monster slayer, hero. A man, under all this ham."),
       B("A witch with a moustache put a spell on me. I made one small remark about the moustache. One green flash later: bacon on legs."),
-      B("Get me out of here. That farmer measured me last night. With a ruler. Buy me from him, please!"),
+      B("Get me out of here. That farmer keeps asking me how I feel about apple sauce. Buy me from him, please!"),
     ];
     return [
       say('Pig', 'pig', "Daaaaaamn, you smell lovely.", { type:'choice', choices: [
@@ -14429,7 +14434,7 @@
     const O = text => ({ speaker, portrait:'npc_grandma', text });
     const pages = [
       O("Picking? Oh, that's easy, child. Keep your eyes open and your knees bent. Mostly the knees."),
-      O("Greenwort grows in the field - little clover leaves. Mushrooms by the trees. Brown ones only. The purple ones make you see things. Christos ate one in '52. He still waves at the moon."),
+      O("Greenwort grows in the field - little clover leaves. Mushrooms by the trees. Brown ones only. The purple ones make you see things. Christos ate one in '52. He spent the whole night arguing with a goat. The goat won."),
       O("The better you get, the more you notice. Bluebells in the woods. And Nightcaps deep in the old woods, where it's dark. Olaf pays well for those. Or so he says."),
       O("Kneel down next to one and pick it. No tools. Christos uses a basket. I use pockets. Pockets don't argue."),
     ];
@@ -14699,7 +14704,7 @@
     skillPanel.hidden = false; skillPanel.classList.add('station'); skillPanel.classList.remove('low');
     const lv = skillLevel(S.skill);
     skillPanel.innerHTML = `<div class="t">${S.st.name} <span>${SKILLS[S.skill].name} ${lv}</span></div><div class="recipes"></div>
-      <div class="msg">${{ cook: 'What shall we cook?', smith: 'What shall we make?', brew: 'What shall we brew?', aim: 'No mana needed. Eldrin enchanted the target.' }[S.st.kind]}</div>`;
+      <div class="msg">${{ cook: 'What shall we cook?', smith: 'What shall we make?', brew: 'What shall we brew?', aim: S.st.mana ? 'One mana a spark.' : 'No mana needed. Eldrin enchanted the target.' }[S.st.kind]}</div>`;
     const list = skillPanel.querySelector('.recipes');
     for(const rc of n22Order(S.st.kind)){
       if(rc.at && rc.at !== S.st.scene) continue;
@@ -14827,10 +14832,13 @@
     if(!S || S.mode !== 'play' || popupOpen) return;
     t = t || performance.now();
     if(S.st.kind === 'aim'){
+      // (panel v172n) the training ground's target too: one mana a spark there (S.st.mana), its own target spot (tx, ty)
+      if(S.st.mana){ if(worldMp() < S.st.mana){ skillPanel.querySelector('.msg').textContent = 'Out of mana. It comes back slowly.'; return; }
+        tpState.spent = tpSpentNow() + S.st.mana; tpState.at = Date.now(); try{ localStorage.setItem(TP_KEY, JSON.stringify(tpState)); }catch(e){} }
       const d = Math.abs(aimPos(t) - 0.5), res = d <= 0.025 ? 'perfect' : d <= S.zoneW / 2 ? 'hit' : 'miss';
       S.swingT = performance.now(); S.shots++;
-      aimShots.push({ t0: performance.now(), res, x0: player.x, y0: player.y - 26, x1: (AIM_TARGET.c + 0.5) * TILE + (res === 'miss' ? (Math.random() < 0.5 ? -1 : 1) * 30 : 0),
-        y1: (AIM_TARGET.r + 1) * TILE - 24 });
+      aimShots.push({ t0: performance.now(), res, x0: player.x, y0: player.y - 26, x1: (S.st.tx != null ? S.st.tx : (AIM_TARGET.c + 0.5) * TILE) + (res === 'miss' ? (Math.random() < 0.5 ? -1 : 1) * 30 : 0),
+        y1: S.st.ty != null ? S.st.ty : (AIM_TARGET.r + 1) * TILE - 24 });
       if(res !== 'miss') S.hits++; if(res === 'perfect'){ S.perf++; areaEv('bullseye'); } else S.flawed = true;
       skillPanel.querySelectorAll('.pips i').forEach((el, i) => { el.classList.toggle('on', i < S.shots && i >= S.shots - 1 ? res !== 'miss' : el.classList.contains('on')); if(i === S.shots - 1 && res === 'miss') el.classList.add('bad'); });
       skillPanel.querySelector('.msg').textContent = res === 'perfect' ? 'Bullseye!' : res === 'hit' ? 'Hit!' : 'Whoosh. Missed.';
@@ -15455,7 +15463,8 @@
         hit: "That's it! The gold bit in the middle counts double.", done: "Timber! Told you. Easy." },
       after: ["That's all there is to it. Pines and dead trees grow all over the field by Grandma Pizza's cottage, and the woods are full of them.",
         "This one grows back too. Oaks you leave alone till you've had some practice."],
-      spots: "Pines and dead trees: the dead tree east of Puddlebottom's houses, the field by Grandma Pizza's cottage, the misty forest. Oaks from level 10, spruce in the old woods from 20. Bram's chopping block at the east end of Puddlebottom takes logs any time." },
+      // (panel v172n: "veel te vol") shorter
+      spots: "Pines and dead trees: by Grandma's cottage and in the woods. Oaks from level 10." },
     mining: { tutor: 'npc_hilda', scene: 'brightwood', player: [16, 43, 'up'], teacher: [14, 42, 'right'],
       offer: "Tell you what - there's a copper and a tin rock right outside, across from my forge. I'll show you.",
       go: "Out we go. Bring the pick.",
@@ -18822,8 +18831,9 @@
     battle: { title: 'Your first fight', rows: ['Attack: swing at the enemy.',
               'Flee: try to run. If it fails, the enemy gets a free hit.',
               'HP is your health. Lose it all and you wake up back home.'] },
-    styles: { title: 'Fighting styles', rows: ['Style: what your hits train. Accurate = Attack (hit more often), Aggressive = Strength (hit harder), Defensive = Defence (get hit less).',
-              'Magic and Items: once you know a spell or carry a potion.'] },
+    // (panel v172n: A, a row per style; the line about Magic and Items was not clear, so it is out)
+    styles: { title: 'Fighting styles', rows: ['In a fight, tap the style button (it starts on Accurate) to switch.', 'Accurate: you hit more often. Trains Attack.',
+              'Aggressive: you hit harder. Trains Strength.', 'Defensive: you get hit less. Trains Defence.'] },
     magic:  { title: 'Magic', rows: ['Spells cost MP, the blue bar in a fight.',
               'In a fight, tap Magic and pick Fireball. It never misses.',
               'Your MP fills up again at the start of every fight.'] },
@@ -36643,18 +36653,28 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   tgHomeApply();
 
   // ---- using the ground ----
-  // the range: arrows (as at Rowan's) and spells (Eldrin's aiming game is the magic practice: here a tap, a spell's XP / 2)
   // the range: Shoot is Eldrin's aiming game with arrows (panel tg: range/play A), as at Rowan's; you stand in the circle
-  // below the middle target and shoot up; Cast is a practice spell (5 MP, a tap)
+  // below the middle target and shoot up
   // (further away: the green narrower, 3 dodge a step; a hit worth 30% more a step)
   const TGR_RANGE = () => { const L = tg.rangeLen || 0, G = TGR_RANGE_GEO[L], r = G.ty - 1.15;
     return { at: [32, Math.floor(G.cy)], targets: [[28.5, r, 1, 2, 8], [32, r, 10, 12, 13], [35.5, r, 20, 22, 19]].slice(0, Math.max(1, tg.targets)).map(t => [t[0], t[1], t[2], t[3] + 3 * L, Math.round(t[4] * (1 + 0.3 * L))]) }; };
-  HOTSPOTS.push({ scene: 'training_ground', x: 32.5 * TILE, get y(){ return TGR_RANGE_GEO[tg.rangeLen || 0].cy * TILE; }, r: 34, get label(){ return hasBow() ? 'Shoot' : 'Cast'; },
+  // (panel v172n: A, "je kan niet kiezen wat je traint en je hoeft alleen maar te klikken") you choose: arrows (Ranged, the
+  // aiming game) or spells (Magic): Eldrin's aiming game at the middle target, five sparks, one mana each, XP for hits
+  const TGR_AIM = () => { const [c, r] = TGR_RANGE().targets[Math.min(1, TGR_RANGE().targets.length - 1)];
+    return { kind: 'aim', name: 'Training Ground Target', mana: 1, tx: (c + 0.5) * TILE, ty: (r + 1) * TILE - 24 }; };
+  function tgRangeChoose(){
+    const arrows = skillUnlocked('ranged'), magic = knownSpells.includes('fireball');
+    if(!arrows && !magic){ showToast('Rowan or Eldrin could show you how to use a target.'); return; }
+    if(arrows && !magic){ rgRangeShoot(false, TGR_RANGE()); return; }
+    if(magic && !arrows){ startStation(TGR_AIM()); return; }
+    queuePopup({ kind: 'tip', label: 'Target practice', title: 'What will you train?', rows: [
+      { text: 'Shoot arrows (Ranged)', btn: { label: 'Shoot', cls: 'go', fn(){ closePopup(); setTimeout(() => rgRangeShoot(false, TGR_RANGE()), 60); return null; } } },
+      { text: 'Cast at the targets (Magic, 1 mana a spark)', btn: { label: 'Cast', cls: 'go', fn(){ closePopup(); setTimeout(() => startStation(TGR_AIM()), 60); return null; } } }] });
+  }
+  HOTSPOTS.push({ scene: 'training_ground', x: 32.5 * TILE, get y(){ return TGR_RANGE_GEO[tg.rangeLen || 0].cy * TILE; }, r: 34, label: 'Practise',
     avail: () => tg.parts.range && tg.targets > 0, act(){
-      if(rgWorldShot) return;
-      if(!hasBow()){ if(worldMp() < 5){ showToast('Hold a bow to shoot, or have 5 MP for a practice spell.'); return; }
-        tpState.spent = tpSpentNow() + 5; tpState.at = Date.now(); try{ localStorage.setItem(TP_KEY, JSON.stringify(tpState)); }catch(e){} gainSkillXp({ magic: 12 }); Sfx.play('spell'); showToast('Your fireball scorches the target. It is used to it.'); return; }
-      rgRangeShoot(false, TGR_RANGE());
+      if(rgWorldShot || station) return;
+      tgRangeChoose();
     }, pages: () => null });
   // the dummies: a practice fight (no loot; the straw and leather ones don't hit back, the steel one softly)
   Object.assign(ENEMIES, {
@@ -36876,6 +36896,61 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(performance.now() - cardAt > 1500){ cardAt = performance.now(); unlockCard(); player.y += 22; player.dir = 'down'; }
       return true; }; }
   // ==== end v172 unlock ====
+  // ==== v172 reeds (tools/blocks/v172_reeds.js) ====
+  // (panel v172n, the owner: "bij dusty de vijver is waar we het riet zo mooi hadden staan, kunnen we dat nog op de andere
+  // vijvers toepassen?") the same fringe of reed clumps and cattails as round Rosalind's pond (wwPaintReeds), painted into
+  // the ground along the water's edge of the tile ponds: Voula's pond at home and the pond at the training ground. Thick
+  // on the far side and the sides, thin along the near (bottom) edge where you stand to fish.
+  const REED_PONDS = { outdoor: [6, 7, 10, 12], training_ground: [2, 16, 14, 24] };
+  function paintPondReeds(g, sc, box){
+    const [c0, r0, c1, r1] = box;
+    const px = (x, y, c) => { g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+    const OUT = '#1b3418', D = '#2c5326', M = '#3f7a31', L = '#5f9f43', HI = '#8cc45c';
+    // one clump: blades fanning out from a dark base, each outlined on its shady side (as at Rosalind's pond)
+    const clump = (bx, by, n, tall, seed) => {
+      for(let i = 0; i < n; i++){
+        const sp = (i - (n - 1) / 2), lean = sp * 0.35 + (hash2(seed + i, 3) - .5) * .5, hh = Math.max(5, Math.round(tall - Math.abs(sp) * 2.2 - hash2(seed, i) * 3));
+        for(let k = 0; k < hh; k++){ const x = Math.round(bx + sp * 1.2 + lean * k), y = by - k; px(x - 1, y, OUT); px(x, y, k < 2 ? D : k > hh - 3 ? HI : (i % 2 ? M : L)); }
+      }
+      g.fillStyle = OUT; g.fillRect(Math.round(bx - n * .7), by + 1, Math.round(n * 1.4) + 1, 1);
+    };
+    const cattail = (x, by, h) => {
+      for(let k = 0; k < h; k++){ px(x, by - k, k < h - 6 ? M : D); px(x - 1, by - k, OUT); }
+      const y = by - h; g.fillStyle = OUT; g.fillRect(x - 2, y - 1, 4, 7); g.fillStyle = '#5b3a1d'; g.fillRect(x - 1, y, 2, 5); px(x - 1, y, '#80552f'); px(x, y + 4, '#3e2712');
+      px(x, y - 2, D); px(x, y - 3, D);
+    };
+    // the bases: the water's own edge as it is drawn (the blue pixels), so the fringe follows the rounded bank as at
+    // Rosalind's pond: from above down each column, from the sides along each row, a few pixels out onto the bank
+    const X0 = c0 * TILE, Y0 = r0 * TILE, BW = (c1 - c0 + 1) * TILE, BH = (r1 - r0 + 1) * TILE;
+    let img; try{ img = g.getImageData(X0, Y0, BW, BH).data; }catch(e){ return; }
+    const blue = (x, y) => { if(x < 0 || y < 0 || x >= BW || y >= BH) return false; const i = (y * BW + x) * 4; return img[i + 2] > img[i] + 40 && img[i + 2] > img[i + 1] + 10; };
+    const spots = [];
+    for(let x = 2; x < BW; x += 4){ let y = 0; while(y < BH && !blue(x, y)) y++; if(y < BH) spots.push([X0 + x, Y0 + y - 2, 'top']);
+      let y2 = BH - 1; while(y2 >= 0 && !blue(x, y2)) y2--; if(y2 >= 0 && y2 > y + 6) spots.push([X0 + x, Y0 + y2 + 3, 'bottom']); }
+    for(let y = 4; y < BH; y += 5){ let x = 0; while(x < BW && !blue(x, y)) x++; if(x < BW) spots.push([X0 + x - 2, Y0 + y, 'side']);
+      let x2 = BW - 1; while(x2 >= 0 && !blue(x2, y)) x2--; if(x2 >= 0 && x2 > x + 6) spots.push([X0 + x2 + 2, Y0 + y, 'side']); }
+    spots.sort((a, b) => a[1] - b[1]);
+    spots.forEach(([bx, by, side], i) => {
+      const h0 = hash2(bx * 7 + by, 7), h1 = hash2(bx + by * 3, 13);
+      // gaps: some everywhere, most along the near edge, where you fish
+      if(h0 < (side === 'bottom' ? 0.65 : 0.3)) return;
+      const jx = Math.round((h1 - .5) * 3), tall = (side === 'bottom' ? 6 : 9) + Math.floor(h0 * (side === 'bottom' ? 4 : 8));
+      if(side !== 'bottom' && h1 > 0.72) cattail(bx + jx + (h0 > .65 ? 3 : -3), by, tall + 4);
+      clump(bx + jx, by, (side === 'bottom' ? 3 : 4) + Math.floor(h1 * (side === 'bottom' ? 2 : 4)), tall, bx * 31 + by);
+    });
+  }
+  function reedScene(id){
+    const sc = SCENES[id]; if(!sc || sc._reeds) return;
+    const p0 = sc.paint; sc._reeds = true;
+    sc.paint = function(g, W, H){
+      if(p0) p0.call(this, g, W, H); else drawGroundTiles(0, 0, 0, sc.w - 1, 0, sc.h - 1);
+      try{ paintPondReeds(g, sc, REED_PONDS[id]); }catch(e){}
+    };
+  }
+  for(const id in REED_PONDS) reedScene(id);
+  // the training ground's scene is made again whenever something is built there
+  { const td0 = tgDefine; tgDefine = function(){ const r = td0.apply(this, arguments); reedScene('training_ground'); return r; }; }
+  // ==== end v172 reeds ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
@@ -36909,6 +36984,11 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       ['Brunhilde (wedstrijd)', () => warp('brightwood', 46.5 * TILE, 41.5 * TILE)], ['Het wespennest (quest aan)', () => { quests.rg_wasps = { state: 'active', hits: 0 }; saveQuests(); warp('fenmire', 13.5 * TILE, 79 * TILE, 'up'); }]]);
     row('Opnieuw beginnen', [['Nieuw spel (de eerste tien minuten)', () => { localStorage.setItem('pt_fresh', '1'); location.reload(); }],
       ['Terug naar de testsave', () => { localStorage.removeItem('pt_seeded_v171'); location.reload(); }]]);
+    // (panel v172n: "Hoe kan ik dit nu checken in de test app?") each fix again, without a new game
+    row('Opnieuw zien', [['Wexley bij de poort', () => { bwMet.delete('wexley_gate'); warp('brightwood', 30.5 * TILE, 56 * TILE, 'up'); say('Loop naar boven, naar de poort'); }],
+      ['Bram geeft Balthazar', () => { q1.done = false; saveQ1(); inventory.steven_note = 1; saveInventory(); companion = null; warp('village', 12 * TILE, 7.3 * TILE, 'down'); say('Praat met Bram bij het varkenshok'); }],
+      ['Houten schild aan', () => { inventory.wooden_shield = (inventory.wooden_shield || 0) + 1; saveInventory(); equipment.shield = 'wooden_shield'; saveEquipment(); say('Schild aan'); }],
+      ['Het hakblok', () => warp('village', 36.5 * TILE, 11.6 * TILE, 'up')]]);
     row('Gratis deel en ontgrendelen', [['Doe alsof dit de Play-app is (niet betaald)', () => { window.__paidLimit = true; try{ localStorage.removeItem('open_world_full'); }catch(e){} say('Play-app, niet betaald: de noordpoort van Brightwood is dicht'); }],
       ['Doe alsof je betaald hebt', () => { try{ localStorage.setItem('open_world_full', '1'); }catch(e){} say('Betaald: alles open'); }],
       ['Naar de noordpoort', () => warp('brightwood', 44.5 * TILE, 7.5 * TILE, 'up')]]);
