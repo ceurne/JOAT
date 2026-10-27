@@ -36925,6 +36925,116 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(performance.now() - cardAt > 1500){ cardAt = performance.now(); unlockCard(); player.y += 22; player.dir = 'down'; }
       return true; }; }
   // ==== end v172 unlock ====
+  // ==== v172 achievements (tools/blocks/v172_achieve.js) ====
+  // Step 10 of panel wish1, achievements inside the game (panel cloud1: A; panel achieve1: 21 of the 25, the Mire Dragon
+  // one called "Dragonbane" in the chat). Menu > Quests > Achievements lists them all: the ones you have in colour, the
+  // rest grey with how to get them (and how far you are for the counted ones). A new one shows a card when you are free
+  // again. Saves from before count: the first time this runs, what you already did is yours without a card for each
+  // (one toast instead). Counts come from what the game already keeps: the mastery tallies (fish, logs, pockets), the
+  // Collection Book (bosses, monsters), the board's own tally (from now on; done notes in the save count once).
+  const ACH_KEY = 'open_world_achievements';
+  let ach = (() => { try{ return JSON.parse(localStorage.getItem(ACH_KEY)) || null; }catch(e){ return null; } })();
+  const achFirstRun = !ach;
+  ach = ach || { got: {}, board: 0 };
+  const saveAch = () => { try{ localStorage.setItem(ACH_KEY, JSON.stringify(ach)); }catch(e){} };
+  const achQDone = id => !!(quests[id] && quests[id].state === 'done');
+  const achMast = skill => Object.entries(mastery).reduce((t, [k, n]) => t + (k.startsWith(skill + ':') ? n : 0), 0);
+  const achSkills = () => Object.keys(SKILLS).filter(k => !SKILLS[k].soon);
+  const achBeat = e => (book.mon[e] || 0) > 0;
+  // id, name, how you get it, icon (a sprite, or 'mon:<enemy>'), the test, and for counted ones [have, need]
+  const ACH = [
+    ['pig', 'Bacon Saved', 'Get Balthazar out of his pen at the farm.', 'pig_s_idle', () => !!q1.done],
+    ['witch', "The Witch's Moustache", 'Help the witch with the moustache.', 'item_moustache_wax', () => achQDone('witch')],
+    ['journal', "Henk's Journal", "Find Henk's journal.", 'item_henk_journal', () => achQDone('journal')],
+    ['pages', 'Every Last Page', "Find every one of Henk's lost pages.", 'item_henk_page', () => achQDone('pages')],
+    ['brood', 'Squashed', 'Beat the Broodmother.', 'mon:broodmother', () => achBeat('broodmother')],
+    ['dragon', 'Dragonbane', 'Beat the Mire Dragon.', 'mon:mire_dragon', () => achBeat('mire_dragon')],
+    ['golem', 'Ice Breaker', 'Beat the Ice Golem.', 'mon:ice_golem', () => achBeat('ice_golem')],
+    ['horror', 'No More Horror', 'Beat the Frost Horror.', 'mon:frost_horror', () => achBeat('frost_horror')],
+    ['bull', 'By the Horns', 'Beat the Sand Bull.', 'mon:sand_bull', () => achBeat('sand_bull')],
+    ['one10', 'Getting the Hang of It', 'Get one skill to level 10.', 'skill_attack', () => achSkills().some(k => skillLevel(k) >= 10)],
+    ['all10', 'Jack of Some Trades', 'Get every skill to level 10.', 'tab_stats', () => achSkills().every(k => skillLevel(k) >= 10),
+      () => [achSkills().filter(k => skillLevel(k) >= 10).length, achSkills().length]],
+    ['all30', 'Jack of All Trades', 'Get every skill to level 30.', 'tab_stats', () => achSkills().every(k => skillLevel(k) >= 30),
+      () => [achSkills().filter(k => skillLevel(k) >= 30).length, achSkills().length]],
+    ['total500', 'Busy, Busy', 'Reach total level 500.', 'tab_stats', () => totalLevel() >= 500, () => [totalLevel(), 500]],
+    ['fish100', 'Plenty of Fish', 'Catch 100 fish.', 'skill_fishing', () => achMast('fishing') >= 100, () => [achMast('fishing'), 100]],
+    ['logs100', 'Timber!', 'Chop 100 logs.', 'skill_woodcutting', () => achMast('woodcutting') >= 100, () => [achMast('woodcutting'), 100]],
+    ['steal50', 'Light Fingers', 'Pick 50 pockets.', 'skill_thieving', () => achMast('thieving') >= 50, () => [achMast('thieving'), 50]],
+    ['board25', 'Odd Job Regular', 'Do 25 notes from the notice board.', 'prop_noticeboard', () => ach.board >= 25, () => [ach.board, 25]],
+    ['house', 'Home Sweet Home', 'Build the big house and all its rooms.', 'house_wood', () => !!tg.home && Object.keys(HOME_THINGS).every(k => tg.rooms[k])],
+    ['trees', 'Green Fingers', 'Grow all eight kinds of tree in your orchard.', 'tg_seed_maple', () => TGR_TREES.every(t => tg.plots.includes(t[0])),
+      () => [TGR_TREES.filter(t => tg.plots.includes(t[0])).length, 8]],
+    ['book', 'Know Your Monsters', 'Fill the Monsters page of the Collection Book.', 'tab_book', () => bookFull(bookPage('monsters')),
+      () => [bookCount(bookPage('monsters')), bookPage('monsters').items().length]],
+    ['coins', 'Moneybags', 'Carry 100 silver at once.', 'item_soggy_purse', () => coins >= 1000],
+  ];
+  // the board's tally: done notes already in the save count once, then every hand-in
+  if(achFirstRun) ach.board = Object.keys(quests).filter(k => BOARD_JOBS.some(j => boardQ(j) === k) && achQDone(k)).length;
+  { const bh0 = boardHandIn;
+    boardHandIn = function(j){ const was = boardState.done.includes(j.id), r = bh0.apply(this, arguments);
+      if(!was && boardState.done.includes(j.id)){ ach.board++; saveAch(); }
+      return r; }; }
+  const achIcon = (ic, size) => ic.startsWith('mon:') ? monIconCanvas(ic.slice(4), size) : atIcon(ic, size);
+  let achWaiting = [];
+  function achCheck(quiet){
+    for(const [id, , , , test] of ACH){
+      if(ach.got[id] || achWaiting.includes(id)) continue;
+      let ok = false; try{ ok = !!test(); }catch(e){}
+      if(!ok) continue;
+      if(quiet){ ach.got[id] = Date.now(); saveAch(); } else achWaiting.push(id);
+    }
+  }
+  // a card for each new one, once you are free again
+  function achFlush(){
+    if(!achWaiting.length || popupOpen || battleActive || dialogueActive || cutsceneLocked || shopOpen || fireworks || tpFx) return;
+    if((fishing && fishing.state !== 'idle') || chopping || mining || (station && station.mode !== 'menu') || pocket || lockpick) return;
+    const id = achWaiting.shift(), A = ACH.find(a => a[0] === id); if(!A) return;
+    ach.got[id] = Date.now(); saveAch();
+    const n = Object.keys(ach.got).length;
+    const sp = A[3].startsWith('mon:') ? monIcon(A[3].slice(4)) : A[3];
+    queuePopup({ kind: 'got', label: 'Achievement!', title: A[1], sprite: sp || null, icon: sp ? null : 'medal',
+      rows: [A[2], `${n} of ${ACH.length} achievements. Menu > Quests > Achievements.`] });
+  }
+  // start-up: what an old save already did is yours, quietly
+  if(achFirstRun){ achCheck(true); const n = Object.keys(ach.got).length; saveAch();
+    if(n) setTimeout(() => showToast(`${n} achievement${n > 1 ? 's' : ''} from before. Menu > Quests > Achievements.`), 4000); }
+  setInterval(() => { try{ if(introSeen){ achCheck(false); achFlush(); } }catch(e){ console.error(e); } }, 1500);
+  // Menu > Quests: a third button, Achievements
+  { const rq0 = renderQuests;
+    const seg = () => { const sg = document.createElement('div'); sg.className = 'segRow atSeg';
+      for(const [id, label] of [['quests', 'Quests'], ['tasks', 'Tasks'], ['ach', 'Achievements']]){
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'uiBtn' + (questSub === id ? '' : ' grey'); b.textContent = label;
+        b.addEventListener('click', () => { questSub = id; renderQuests(); }); sg.appendChild(b); }
+      return sg; };
+    renderQuests = function(){
+      const list = document.getElementById('questList');
+      if(questSub !== 'ach'){ const r = rq0.apply(this, arguments); const old = list.querySelector('.atSeg'); if(old) old.remove(); list.prepend(seg()); return r; }
+      list.innerHTML = '';
+      const have = ACH.filter(a => ach.got[a[0]]).length;
+      const head = document.createElement('div'); head.className = 'statHint achHead'; head.textContent = `${have} of ${ACH.length}`;
+      const box = document.createElement('div'); box.className = 'questBox achBox';
+      for(const [id, name, how, ic, , count] of ACH){ const ok = !!ach.got[id];
+        const r = document.createElement('div'); r.className = 'achRow' + (ok ? ' ok' : '');
+        const c = achIcon(ic, 34); c.className = 'achIco';
+        const t = document.createElement('div'); t.className = 'achText'; t.innerHTML = '<div class="achName"></div><div class="achHow"></div>';
+        t.firstChild.textContent = name;
+        let line = how; if(!ok && count){ try{ const [a, b] = count(); line += ` (${Math.min(a, b)}/${b})`; }catch(e){} }
+        t.lastChild.textContent = line;
+        r.append(c, t); box.appendChild(r); }
+      list.append(seg(), head, box);
+    }; }
+  { const st = document.createElement('style');
+    st.textContent = `.achHead{ margin: 6px 2px 4px; font-weight: 700; }
+      .achBox{ display: flex; flex-direction: column; gap: 6px; }
+      .achRow{ display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,0.22); }
+      .achRow .achIco{ flex: 0 0 34px; width: 34px; height: 34px; image-rendering: pixelated; filter: grayscale(1) brightness(0.55); opacity: 0.7; }
+      .achRow.ok .achIco{ filter: none; opacity: 1; }
+      .achRow .achName{ font-weight: 700; color: #9a9384; }
+      .achRow.ok .achName{ color: #f4c542; }
+      .achRow .achHow{ font-size: 0.86em; opacity: 0.85; }`;
+    document.head.appendChild(st); }
+  // ==== end v172 achievements ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
