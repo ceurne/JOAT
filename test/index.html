@@ -9649,7 +9649,9 @@
       const aim = def.boss ? Math.max(0.6, hitChance(def.dexterity, playerDodgeDex())) : hitChance(def.dexterity, playerDodgeDex());   // round 8b
       if(!blind && Math.random() < aim){
         const armor = equipBonus('armor');
-        let dmg = Math.max(1, attackDamage(enemyPower(def)) - armor);
+        // (panel armour1: B) armour takes off at most half a hit: a full set no longer makes you nearly untouchable
+        const raw = attackDamage(enemyPower(def));
+        let dmg = Math.max(1, Math.ceil(raw / 2), raw - armor);
         if(soft) dmg = Math.max(1, Math.round(dmg * 0.5));
         if(glare) dmg = Math.max(1, Math.round(dmg * 0.7));
         if(stone) dmg = Math.max(1, Math.round(dmg * 0.5));
