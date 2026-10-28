@@ -37139,6 +37139,165 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   // a job left from yesterday goes from the quest list
   if(quests.daily && quests.daily.state !== 'done' && daily.day !== dlyDay()){ delete quests.daily; saveQuests(); }
   // ==== end v172 daily job ====
+  // ==== v172 boss of the week (tools/blocks/v172_bossweek.js) ====
+  // Panel after1: a boss of the week. Each week (from Monday) one of the area bosses you have beaten is the boss of the
+  // week: angrier than its usual rematch (a third more health, two more strength). Beat it in its lair that week for a
+  // purse from the Captain; once a week per player. Barnaby shouts which one; it sits in Menu > Quests for the week.
+  // The weeks you won are counted (bossWeek.wins): something rare to wear comes on top later (panel cos1).
+  const BW_KEY = 'open_world_bossweek';
+  let bossWeek = (() => { try{ return JSON.parse(localStorage.getItem(BW_KEY)) || null; }catch(e){ return null; } })() || { week: null, won: false, wins: 0 };
+  const saveBossWeek = () => { try{ localStorage.setItem(BW_KEY, JSON.stringify(bossWeek)); }catch(e){} };
+  // the week number, from Monday (1 Jan 1970 was a Thursday)
+  const bwkNow = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000 + 3 * 86400000) / (7 * 86400000));
+  const BWK_NAMES = { forest: 'the Broodmother', fenmire: 'the Mire Dragon', frostpeak: 'the Frost Horror' };
+  // this week's boss: one you have beaten, picked by the week
+  function bwkBoss(){
+    const ks = Object.keys(BOSSES).filter(k => bossWins(k) > 0); if(!ks.length) return null;
+    return ks[(bwkNow() * 7 + 3) % ks.length];
+  }
+  // a new week: a new boss, the quest again
+  function bwkRoll(){
+    const k = bwkBoss(); if(!k) return null;
+    if(bossWeek.week !== bwkNow()){ bossWeek.week = bwkNow(); bossWeek.won = false; saveBossWeek();
+      quests.bossweek = { state: 'active' }; saveQuests(); }
+    return k;
+  }
+  QUEST_INFO.bossweek = { title: 'Boss of the Week', giver: 'The Captain',
+    goal: () => { const k = bwkBoss(); if(!k) return ''; const B = BOSSES[k];
+      return bossWeek.won ? `You beat ${BWK_NAMES[k]} this week. A new boss on Monday.`
+        : `This week: ${BWK_NAMES[k]}, angrier than ever. Beat it in its lair (${B.name}) before Monday for the Captain's purse.`; },
+    hide: q => q.state === 'done' };
+  const bwkPurse = () => 300 + 50 * Math.min(10, bossWeek.wins);
+  // the lair: this week's boss offers the harder fight
+  var bwkFight = false;
+  { const lp0 = lairPages;
+    lairPages = function(k){
+      const pages = lp0.apply(this, arguments);
+      if(bwkRoll() !== k || bossWeek.won || lairBeatenNow === k) return pages;
+      const pg = pages[0]; if(!pg || !pg.choices) return pages;
+      pg.text = `${BOSSES[k].roomText} It is the boss of the week, and it knows it. It looks angrier than ever.`;
+      pg.choices = [{ label: 'Fight the boss of the week!', onChoose(){ bossStats(k); const d = ENEMIES[BOSSES[k].enemy];
+          d.maxHp = Math.round(d.maxHp * 1.33); d.strength += 2; bwkFight = true; battleBoss = k; startBattle(BOSSES[k].enemy, { quest: true }); } },
+        ...pg.choices.filter(c => !/Challenge|Fight/.test(c.label))];
+      return pages; }; }
+  { const be0 = bossBattleEnd;
+    bossBattleEnd = function(outcome){
+      const k = battleBoss, weekly = bwkFight; bwkFight = false;
+      const r = be0.apply(this, arguments);
+      if(weekly && k && outcome === 'victory' && !bossWeek.won){
+        bossWeek.won = true; bossWeek.wins = (bossWeek.wins || 0) + 1; saveBossWeek();
+        const purse = bwkPurse(); addCoins(purse);
+        quests.bossweek = { state: 'active' }; saveQuests();
+        queuePopup({ kind: 'done', label: 'Boss of the Week', title: `${BWK_NAMES[k][0].toUpperCase() + BWK_NAMES[k].slice(1)}, beaten!`, rows: [
+          { icon: 'coin', text: `+${formatMoney(purse)} from the Captain` }, `Bosses of the week beaten: ${bossWeek.wins}.`, 'A new one on Monday.'] });
+      }
+      return r; }; }
+  // Barnaby shouts it
+  { const bn0 = barnabyNews;
+    barnabyNews = function(){ const n = bn0.apply(this, arguments), k = bwkBoss();
+      if(k) n.push(bossWeek.won && bossWeek.week === bwkNow() ? `Hear ye! The stranger beat ${BWK_NAMES[k]} this week! The Captain paid up! She hates paying up!`
+        : `Hear ye! The boss of the week is ${BWK_NAMES[k]}! It's angry! Bring it a nice purse! No, wait. It brings YOU one! If you win!`);
+      return n; }; }
+  // on start and every minute: the week's quest, and a word the first time in a new week
+  setInterval(() => { try{ if(!introSeen) return; const was = bossWeek.week, k = bwkRoll();
+    if(k && was !== null && was !== bossWeek.week) showToast(`Boss of the week: ${BWK_NAMES[k]}. Menu > Quests.`); }catch(e){ console.error(e); } }, 60000);
+  setTimeout(() => { try{ bwkRoll(); }catch(e){} }, 3000);
+  // ==== end v172 boss of the week ====
+  // ==== v172 contests (tools/blocks/v172_contests.js) ====
+  // Panel after1: contests in the villages, a new round every week (from Monday, like the boss of the week). You play
+  // against the villagers, whose scores for the week are set on Monday; beat them all and the host pays you, once a
+  // week per contest. Your best of the week counts by itself, there is nothing to hand in.
+  // - The Old Mill Weigh-In (Old Dusty): the heaviest fish of the week's kind (one you have weighed before).
+  // - The Brightwood Pot Show (Bertha): the best-thrown pot of the week on a potter's wheel (the shape score, out of 100).
+  // - The Rimewick Run (Frida): the fastest race down the hill (only a race you win has a time).
+  // The villagers are hard to beat on purpose (the owner: rewards "echt lastig te verdienen"): the weigh-in wants about one
+  // catch in nine, the pot show a near-perfect pot, the run a very clean race with the jumps (tools/qbot/race_times.js:
+  // a good run is about 22.5 s, a near-perfect one 21.8 s). The wins are counted (contest.wins): the rare clothes from
+  // panel cos1 come on top later.
+  const CT_KEY = 'open_world_contests';
+  let contest = (() => { try{ return JSON.parse(localStorage.getItem(CT_KEY)) || null; }catch(e){ return null; } })() || { week: null, wins: {} };
+  const saveContest = () => { try{ localStorage.setItem(CT_KEY, JSON.stringify(contest)); }catch(e){} };
+  const ctRnd = (seed) => { let h = seed >>> 0; return () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296; }; };
+  const CONTESTS = {
+    fish: { host: 'npc_dusty', hostName: 'Old Dusty', title: 'The Old Mill Weigh-In', ask: 'The weigh-in?', better: 1, prize: 150, skill: 'fishing',
+      rivals: ['Old Dusty', 'Bram', 'Greta'], fr: [0.56, 0.67, 0.77] },
+    pot: { host: 'npc_bertha', hostName: 'Bertha', title: 'The Brightwood Pot Show', ask: 'The pot show?', better: 1, prize: 150, skill: 'crafting',
+      rivals: ['Rosie', 'Lorenzo', 'Mrs. Pennywhistle'], sc: [80, 86, 91] },
+    sled: { host: 'npc_frida', hostName: 'Frida', title: 'The Rimewick Run', ask: 'The Rimewick Run?', better: -1, prize: 200, skill: null,
+      rivals: ['Tomas', 'Leif', 'Frida'], t: [25.0, 23.7, 22.75] },
+  };
+  // a new week: the villagers' scores, the fish of the week (fixed for the week), your bests cleared
+  function ctRoll(){
+    const w = bwkNow(); if(contest.week === w) return;
+    const rnd = ctRnd(w * 9973 + 17), kinds = Object.keys(FISH_KG).filter(id => book.kg[id] !== undefined && ITEMS[id]).sort();
+    contest.week = w; contest.best = {}; contest.paid = {}; contest.fishId = kinds.length ? kinds[Math.floor(rnd() * kinds.length)] : null;
+    contest.vill = {
+      fish: CONTESTS.fish.fr.map(f => f + (rnd() - 0.5) * 0.08),
+      pot: CONTESTS.pot.sc.map(s => Math.round(s + (rnd() - 0.5) * 4)),
+      sled: CONTESTS.sled.t.map(t => Math.round((t + (rnd() - 0.5) * 0.5) * 100) / 100) };
+    saveContest();
+  }
+  // the villagers' scores in the contest's own unit (the fish in kg of the week's kind)
+  function ctVillagers(k){
+    ctRoll(); const C = CONTESTS[k];
+    if(k === 'fish'){ const r = FISH_KG[contest.fishId]; if(!r) return [];
+      return C.rivals.map((n, i) => [n, Math.round((r[0] + (r[1] - r[0]) * contest.vill.fish[i]) * 100) / 100]); }
+    return C.rivals.map((n, i) => [n, contest.vill[k][i]]);
+  }
+  const ctFmt = (k, v) => k === 'fish' ? kgText(v) : k === 'pot' ? `${v} points` : `${v.toFixed(2)} s`;
+  const ctBeats = (k, v) => v != null && ctVillagers(k).every(([, s]) => CONTESTS[k].better > 0 ? v > s : v < s);
+  function ctBest(k, v){
+    ctRoll(); const b = contest.best[k], C = CONTESTS[k];
+    if(b != null && (C.better > 0 ? v <= b : v >= b)) return;
+    contest.best[k] = v; saveContest();
+    if(!contest.paid[k]) showToast(ctBeats(k, v) ? `${C.title}: you lead with ${ctFmt(k, v)}! Tell ${C.hostName}.` : `${C.title}: your best this week, ${ctFmt(k, v)}.`);
+  }
+  // the counts: a weighed fish of the week's kind, a thrown pot, a won race (its own race time, not the clock's)
+  { const fw0 = fishWeigh;
+    fishWeigh = function(id){ const r = fw0.apply(this, arguments);
+      try{ ctRoll(); if(r && id === contest.fishId) ctBest('fish', r.kg); }catch(e){}
+      return r; }; }
+  { const fr0 = finishRecipe;
+    finishRecipe = function(ok){
+      const C = station && station.cr, pot = ok && C && C.phase === 'throw' && C.done && C.done.stars > 0 ? Math.round(C.done.score * 100) : null;
+      const r = fr0.apply(this, arguments);
+      try{ if(pot != null) ctBest('pot', pot); }catch(e){}
+      return r; }; }
+  { const rs0 = raceStart, ru0 = raceUpdate, re0 = raceEnd;
+    raceStart = function(R){ const r = rs0.apply(this, arguments); R._t = 0; return r; };
+    raceUpdate = function(R, dt){ if(R && R.st === 'run') R._t = (R._t || 0) + dt; return ru0.apply(this, arguments); };
+    raceEnd = function(R, win){ const r = re0.apply(this, arguments);
+      try{ if(win && R._t > 0) ctBest('sled', Math.round(R._t * 100) / 100); }catch(e){}
+      return r; }; }
+  // the host: the board for the week, and the prize when you are first
+  function ctPages(k, S){
+    ctRoll(); const C = CONTESTS[k], mine = contest.best[k], wins = (contest.wins || {})[k] || 0;
+    if(k === 'fish' && !contest.fishId) return [S("Catch something first. And weigh it. Then we'll talk about contests.")];
+    if(k === 'pot' && !(mastery && Object.keys(mastery).some(x => x.startsWith('crafting:')))) return [S("Make a pot first. Then you can show it. That's how shows work.")];
+    if(k === 'sled' && !(quests.sledrace && quests.sledrace.wins)) return [S("Beat me in a race first. Then you can race for real.")];
+    const L = [...ctVillagers(k), ...(mine != null ? [['You', mine]] : [])].sort((a, b) => C.better > 0 ? b[1] - a[1] : a[1] - b[1]);
+    const what = k === 'fish' ? `This week: the heaviest ${ITEMS[contest.fishId].name}.` : k === 'pot' ? 'This week: the best pot off a potter\'s wheel.' : 'This week: the fastest race down the hill (a race you win).';
+    const rows = [what, ...L.map(([n, v], i) => `${i + 1}. ${n}: ${ctFmt(k, v)}`), `Prize: ${formatMoney(C.prize)}${C.skill ? ` and ${SKILLS[C.skill].name} XP` : ''}. A new round on Monday.`];
+    if(wins) rows.push(`You have won it ${wins} time${wins > 1 ? 's' : ''}.`);
+    const out = [{ popup: { kind: 'quest', label: 'Contest', title: C.title, rows } }];
+    if(contest.paid[k]) out.unshift(S("You won this week's. Come back Monday and do it again. If you can."));
+    else if(ctBeats(k, mine)){
+      out.push(S({ fish: "That's the biggest one this week. By a whisker. A big whisker. Here, you've earned it.",
+        pot: "That's the best pot in the show. Lorenzo cried. He cries at everything, but still. Your prize.",
+        sled: "Fastest down the hill this week. Faster than me. I'm not crying, it's the wind. Here." }[k]),
+        { popup: { kind: 'done', label: 'Contest won!', title: C.title, rows: [{ icon: 'coin', text: `+${formatMoney(C.prize)}` }, ...(C.skill ? [`+200 ${SKILLS[C.skill].name} XP`] : []), `Won ${wins + 1} time${wins ? 's' : ''}.`] },
+          onShow(){ if(contest.paid[k]) return; contest.paid[k] = true; contest.wins = contest.wins || {}; contest.wins[k] = wins + 1; saveContest();
+            addCoins(C.prize); if(C.skill) gainSkillXp({ [C.skill]: 200 }); } });
+    }
+    else out.unshift(S(mine == null ? { fish: "Weigh-in's open. Bring me nothing, I weigh as you catch. Just catch something big.",
+      pot: "The pot show! Throw a pot on a wheel this week. I'll see it. I see everything that comes off a wheel.",
+      sled: "The Rimewick Run! Win a race down the hill this week and I'll time it. Then we'll see." }[k]
+      : "Not bad. Not first, though. You've got till Monday."));
+    return out;
+  }
+  for(const [k, C] of Object.entries(CONTESTS)){ const t = TOWN[C.host]; if(!t) continue; const prev = t.topics;
+    t.topics = (S, npc) => [...(prev ? prev(S, npc) : []), { label: C.ask, onChoose(){ spliceNext(...ctPages(k, S)); } }]; }
+  // ==== end v172 contests ====
 
 
   // ==== playtest panel (tools/playtest_v171.js; test copies only, never the live game) ====
