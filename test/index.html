@@ -37567,7 +37567,7 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     const row = (title, list) => { const h = document.createElement('h4'); h.textContent = title; box.appendChild(h);
       for(const [t, fn] of list){ const b = document.createElement('button'); b.textContent = t; b.addEventListener('click', fn); box.appendChild(b); } };
     box.innerHTML = '<div>Testversie: alles wat je hier doet blijft in deze test, je echte spel merkt er niets van.</div>';
-    row('Ga naar', [['Rowan en zijn schietbaan', () => warp('brightwood', (RG_RANGE.at[0] + 0.5) * TILE, (RG_RANGE.at[1] + 0.6) * TILE, 'up')], ['Thuis bij het hek', () => warp('outdoor', 3.5 * TILE, 8.5 * TILE, 'left')],
+    row('Ga naar', [['Het oude bos (rondlopende monsters)', () => warp('misty_forest', 20 * TILE, 20 * TILE, 'down')], ['De Diepe Mijn (de schacht)', () => warp('fp_mine_2', 12.2 * TILE, 9.9 * TILE, 'right')], ['Rowan en zijn schietbaan', () => warp('brightwood', (RG_RANGE.at[0] + 0.5) * TILE, (RG_RANGE.at[1] + 0.6) * TILE, 'up')], ['Thuis bij het hek', () => warp('outdoor', 3.5 * TILE, 8.5 * TILE, 'left')],
       ['Het bouwplan (thuis)', () => warp('house_interior', 208, 252, 'up')], ['De trainingsplek', () => warp('training_ground', 36.5 * TILE, 13.5 * TILE, 'left')],
       ['Schietbaan trainingsplek', () => warp('training_ground', 32.5 * TILE, 22.6 * TILE, 'up')], ['Smidse en werkplaats', () => warp('home_west', 9.5 * TILE, 7.6 * TILE, 'left')],
       ['Brouwkamer en slaapkamer', () => warp('home_east', 8.5 * TILE, 7.6 * TILE, 'right')],
