@@ -37381,10 +37381,16 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     if(!roamOn()){ roam.list = []; return; }
     const busy = battleActive || dialogueActive || cutsceneLocked || popupOpen || shopOpen || menuIsOpen() || tpFx || doorFx;
     if(busy){ roam.calmUntil = Math.max(roam.calmUntil, now + 2500); return; }
+    // (owner, 14 Nov: "hoe zit het als je bijvoorbeeld hout aan het hakken bent") while you chop, fish, mine, cook at a
+    // station, pick a pocket or a lock, they leave you be: no coming for you, no fight, and one that is close steps back;
+    // when you stop they wait a moment before they notice you again
+    const working = (fishing && fishing.state !== 'idle') || chopping || mining || station || pocket || lockpick;
+    if(working) roam.calmUntil = Math.max(roam.calmUntil, now + 2500);
     for(const m of roam.list){
       if(m.gone){ if(now > m.gone){ const n = roamMake(8 * TILE); if(n) Object.assign(m, n, { gone: 0 }); } continue; }
       m.t += dt * 1000;
       const dx = player.x - m.x, dy = player.y - m.y, dist = Math.hypot(dx, dy), calm = now < roam.calmUntil;
+      if(working && dist < 3 * TILE){ roamStep(m, -dx, -dy, ROAM_WANDER, dt); continue; }
       // touching: the fight
       if(!calm && dist < ROAM_TOUCH){
         m.gone = now + 45000 + Math.random() * 45000; roam.calmUntil = now + 4000;
