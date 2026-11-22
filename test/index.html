@@ -37378,8 +37378,18 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     if(canStandAt(nx, ny)){ m.x = nx; m.y = ny; }
     else if(canStandAt(nx, m.y)) m.x = nx;
     else if(canStandAt(m.x, ny)) m.y = ny;
-    else { m.moving = false; m.goal = null; return false; }
+    else {
+      // (owner, 22 Nov: "de monsters lopen vrij veel vast tegen de stenen aan") blocked: go round it, sideways for a
+      // moment (the side that is open), then try the straight way again
+      const px = -dy / d, py = dx / d, side = [1, -1].find(k => canStandAt(m.x + px * k * 6, m.y + py * k * 6));
+      if(side){ m.detour = { x: px * side, y: py * side, until: performance.now() + 700 }; }
+      m.moving = false; m.goal = null; return false; }
     m.moving = true; return true;
+  }
+  // a step that first finishes a detour round a rock or a wall
+  function roamGo(m, dx, dy, speed, dt){
+    if(m.detour && performance.now() < m.detour.until && roamStep(m, m.detour.x * 10, m.detour.y * 10, speed, dt)) return true;
+    m.detour = null; return roamStep(m, dx, dy, speed, dt);
   }
   function roamUpdate(){
     const now = performance.now();
@@ -37397,18 +37407,20 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
       if(m.gone){ if(now > m.gone){ const n = roamMake(8 * TILE); if(n) Object.assign(m, n, { gone: 0 }); } continue; }
       m.t += dt * 1000;
       const dx = player.x - m.x, dy = player.y - m.y, dist = Math.hypot(dx, dy), calm = now < roam.calmUntil;
-      if(working && dist < 3 * TILE){ roamStep(m, -dx, -dy, ROAM_WANDER, dt); continue; }
+      if(working && dist < 3 * TILE){ roamGo(m, -dx, -dy, ROAM_WANDER, dt); continue; }
       // touching: the fight
       if(!calm && dist < ROAM_TOUCH){
         m.gone = now + 45000 + Math.random() * 45000; roam.calmUntil = now + 4000;
         encounterDistanceAccum = -ENCOUNTER_GRACE; beginEncounter(m.id); return;
       }
-      if(!calm && dist < ROAM_SEE && roamWeak(m)){ roamStep(m, -dx, -dy, ROAM_FLEE, dt); continue; }
-      if(!calm && dist < ROAM_SEE){ roamStep(m, dx, dy, ROAM_CHASE, dt); continue; }
+      if(!calm && dist < ROAM_SEE && roamWeak(m)){ roamGo(m, -dx, -dy, ROAM_FLEE, dt); continue; }
+      if(!calm && dist < ROAM_SEE){ roamGo(m, dx, dy, ROAM_CHASE, dt); continue; }
       // wandering: a short walk to a nearby spot, a pause, another walk
       if(m.wait > 0){ m.wait -= dt; m.moving = false; continue; }
-      if(!m.goal){ const a = Math.random() * Math.PI * 2, r = (1.5 + Math.random() * 3) * TILE; m.goal = [m.x + Math.cos(a) * r, m.y + Math.sin(a) * r]; }
-      const moved = roamStep(m, m.goal[0] - m.x, m.goal[1] - m.y, ROAM_WANDER, dt);
+      if(!m.goal){ for(let k = 0; k < 8 && !m.goal; k++){ const a = Math.random() * Math.PI * 2, r = (1.5 + Math.random() * 3) * TILE, gx = m.x + Math.cos(a) * r, gy = m.y + Math.sin(a) * r;
+          if(canStandAt(gx, gy) && canStandAt((m.x + gx) / 2, (m.y + gy) / 2)) m.goal = [gx, gy]; }
+        if(!m.goal){ m.wait = 1 + Math.random() * 2; continue; } }
+      const moved = roamGo(m, m.goal[0] - m.x, m.goal[1] - m.y, ROAM_WANDER, dt);
       if(!moved || Math.hypot(m.goal[0] - m.x, m.goal[1] - m.y) < 3){ m.goal = null; m.wait = 1.5 + Math.random() * 4; }
     }
   }
@@ -37462,7 +37474,11 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     const src = SCENES[D.from]; if(!src) continue;
     // the room's map as it was drawn (doors and furniture), without the old mine's own ore rocks
     const map = src.map.map(row => row.map(t => t === T.ORE ? T.WOOD_FLOOR : t));
-    SCENES[D.id] = { id: D.id, map, w: map[0].length, h: map.length, doors: {}, defaultGround: src.defaultGround, decor: [], npcs: [], items: [],
+    // (owner, 22 Nov: "soms interact je met dingen die er niet zijn") the room's furniture comes along with its map, so
+    // nothing solid stands there unseen; the ice cave's frozen miner's chest stays behind (its spot is the shaft down)
+    const decor = src.decor.filter(d => d.sprite !== 'prop_chest');
+    if(D.hole) map[D.hole[1]][D.hole[0]] = T.WOOD_FLOOR;
+    SCENES[D.id] = { id: D.id, map, w: map[0].length, h: map.length, doors: {}, defaultGround: src.defaultGround, decor, npcs: [], items: [],
       foggy: false, riverTiled: false, bridge: null, backdrop: D.back, chunks: null, paint: null, solid: new Set(), fine: null };
     for(const k of D.up) SCENES[D.id].doors[k] = { to: 'fp_mine_2', spawn: DEEP_OUT };
     SCENE_MUSIC[D.id] = ['forest_amb'];
@@ -37540,6 +37556,27 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
         addCoins(coinsGot); gainSkillXp({ mining: 10 * n }); if(ITEMS[gem]){ inventory[gem] = (inventory[gem] || 0) + 1; saveInventory(); }
         queuePopup({ kind: 'done', label: 'The Deep Mine', title: `The guardian of floor ${n}, beaten!`, rows: [{ icon: 'coin', text: `+${formatMoney(coinsGot)}` }, `+${10 * n} Mining XP`,
           ...(ITEMS[gem] ? [{ item: gem, text: `+ ${ITEMS[gem].name}` }] : []), 'The way down is open.'] });
+      }
+      return r; }; }
+  // (owner, 22 Nov: "niet duidelijk waar je heen moet") the way down and the way out, marked over the room: a small sign
+  // that bobs over the spot ("Down" in gold, "Out" in pale blue; "Down" goes grey while the guardian bars it)
+  function deepSign(x, y, text, col){
+    ctx.save(); ctx.font = '16px "Jersey 10", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(text).width + 14, h = 18, bob = Math.round(Math.sin(performance.now() / 300) * 2);
+    ctx.fillStyle = 'rgba(28,20,14,.85)'; ctx.fillRect(Math.round(x - w / 2), Math.round(y - h + bob), Math.round(w), h);
+    ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.strokeRect(Math.round(x - w / 2) + .5, Math.round(y - h + bob) + .5, Math.round(w) - 1, h - 1);
+    // a little pointer under the sign
+    ctx.fillStyle = 'rgba(28,20,14,.85)'; ctx.beginPath(); ctx.moveTo(x - 4, y + bob); ctx.lineTo(x + 4, y + bob); ctx.lineTo(x, y + 5 + bob); ctx.fill();
+    ctx.fillStyle = col; ctx.fillText(text, x, y - h / 2 + bob + 1); ctx.restore(); }
+  { const ps1 = pushShowSprites;
+    pushShowSprites = function(sprites, camX, camY){
+      const r = ps1.apply(this, arguments);
+      const D = currentScene && DEEP_T.find(x => x.id === currentScene.id);
+      if(D){
+        const shut = deepGuardFloor(deep.floor) && deep.guard !== deep.floor;
+        const [dc, dr] = D.down.split(',').map(Number), [uc, ur] = D.up[0].split(',').map(Number), uw = D.up.length > 1 ? 0.5 : 0;
+        sprites.push({ row: 1e6, draw: () => { deepSign((dc + 0.5) * TILE - camX, (dr - 0.3) * TILE - camY, shut ? 'Down (shut)' : 'Down', shut ? '#9a9384' : '#f4c542');
+          deepSign((uc + 0.5 + uw) * TILE - camX, (ur - 0.2) * TILE - camY, 'Out', '#bfe3f2'); } });
       }
       return r; }; }
   // the guardian drawn where it waits (its book picture, about as big as you)
