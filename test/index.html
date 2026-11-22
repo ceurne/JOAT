@@ -13410,14 +13410,14 @@
     say("Henk's Journal", null, "“Day 40. The locals call it ‘the seam’. It isn't natural. Something in the Fenmire is tugging it open, stitch by stitch. I'm going to find out what.”"),
     say("Henk's Journal", null, "“Day 41. If anyone like me reads this: don't trust the thing that lives under the swamp. And don't eat the sausages from the man by the fountain.”") ];
   function readHenkJournal(){
-    startCutscene([ narrate("A school notebook in a clear plastic cover, with a barcode. Inside the cover: “Henk de Vries, Utrecht”."), ...henkPages() ]);
+    startCutscene([ narrate("A school notebook in a clear plastic cover, with a barcode. Inside the cover: “Henk de Vries, Alkmaar”."), ...henkPages() ]);
   }
   function archiveDeskPages(){
     const q = quests.journal;
     if(!q || q.state !== 'open') return [ narrate("The reading desk. Dust, a candle stub, and a clean rectangle where Henk's journal used to lie. The mouse skeleton hasn't moved. Good.") ];
     return [
       narrate("Dusty shelves. A mouse skeleton, very dead. And on the desk, something that doesn't belong here at all: a notebook in a clear plastic cover. With a barcode."),
-      narrate("On the inside of the cover, in neat biro: “Henk de Vries, Utrecht”."),
+      narrate("On the inside of the cover, in neat biro: “Henk de Vries, Alkmaar”."),
       ...henkPages(),
       ...(companion ? [ say('Balthazar', 'pig', "THANK you, Henk. A man of wisdom. What's a broodje?") ] : []),
       narrate("Father Ambrose is suddenly standing behind you. Behind him the baron wheezes down the last few steps."),
@@ -16921,7 +16921,7 @@
     const q = quests.pages;
     startCutscene([ narrate("You dig where the X was. Under a hand of sand: a green bottle with a cork, and a rolled-up page inside."),
       say("Henk's Journal", null, "“I found where the sea went. It went DOWN. There's a crack under the sand, and something at the bottom of it is drinking. I'm going to have a look.”"),
-      say("Henk's Journal", null, "“If you're reading this, I either came back and forgot to take the note, or... well. Take my compass. It points at things people forgot. - Henk de Vries, Utrecht”"),
+      say("Henk's Journal", null, "“If you're reading this, I either came back and forgot to take the note, or... well. Take my compass. It points at things people forgot. - Henk de Vries, Alkmaar”"),
       ...(companion ? [ say('Balthazar', 'pig', "He went down a crack. After a drinking thing. And we're... going to do the same, aren't we. Brilliant.") ] : []),
       { popup: { kind: 'done', title: "Henk's Lost Pages", rows: [{ item: 'henk_compass', text: "+ Henk's Compass" }, { icon: 'coin', text: '+50 copper' }, 'Its needle (top right) points at the nearest secret you haven\'t found yet.'] },
         onShow(){ inventory.henk_compass = 1; saveInventory(); addCoins(50); q.state = 'done'; q.step = 'done'; saveQuests(); } } ]);
