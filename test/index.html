@@ -4382,7 +4382,7 @@
       shout: [25, 40, () => quests.song && quests.song.state === 'done'
         ? [`♪ ${SONG_VERSE1} ${songLine(1)} ♪`, `♪ ${SONG_VERSE2} ${songLine(2)} ♪`][Math.floor(Math.random()*2)]
         : ["♪ Oh Brightwood, oh Brightwood, your walls are so tall... ♪", "♪ Da-dum, da-dum... what rhymes with Brightwood? ♪"][Math.floor(Math.random()*2)]] },
-    npc_barnaby: { name:'Barnaby', at:[30, 30], leash:40, custom: (npc, S) => { const news = S(barnabyNews()[Math.floor(Math.random()*barnabyNews().length)]), show = petShowPages(npc, S); return show ? [news, ...show] : [news]; },
+    npc_barnaby: { name:'Barnaby', at:[30, 30], leash:40, custom: (npc, S) => [S(barnabyNews()[Math.floor(Math.random()*barnabyNews().length)])],
       lines: [ "Hear ye!" ],
       shout: [12, 20, () => { const n = barnabyNews(); return n[Math.floor(Math.random()*n.length)]; }] },
     npc_pip: { name:'Pip', at:[33, 28], scale:0.95, speed:22, leash:72, lines: [
@@ -25200,7 +25200,8 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
   function wwPondLevel(){ return wwFin && wwFin.mpond != null ? wwFin.mpond : wwAt('done') ? 1 : 0; }
   const wwPig = t => say('Balthazar', 'pig', t);
   const wwDusty = t => say('Old Dusty', 'npc_dusty', t);
-  SCENE_MUSIC.old_mill = SCENE_MUSIC.misty_forest || SCENE_MUSIC.outdoor;
+  // (owner, 22 Nov: the forest music need not go on at the mill, something more cheerful) the home tune
+  SCENE_MUSIC.old_mill = ['home'];
   // the road south (user, 7 Oct: no sign; the desert opens after Aldric, and Eldrin stops you before that - and once after,
   // to tell you Henk went that way and that there's no water down there: the water quest starts then)
   let wwStopAt = 0;
@@ -37138,6 +37139,12 @@ if(HK.kind === 'darts') game('g_darts', { who: 'Greta', sayX: 232, sayY: 150, pi
     } }]; }
   // a job left from yesterday goes from the quest list
   if(quests.daily && quests.daily.state !== 'done' && daily.day !== dlyDay()){ delete quests.daily; saveQuests(); }
+  // (owner, 22 Nov: talking to Barnaby went straight into the pet show) the show is a question to ask him now, like the job
+  { const tp = TOWN.npc_barnaby && TOWN.npc_barnaby.topics;
+    if(TOWN.npc_barnaby) TOWN.npc_barnaby.topics = (S, npc) => [...(tp ? tp(S, npc) : []), { label: 'The pet show?', onChoose(){
+      const show = petShowPages(npc, S);
+      if(show){ spliceNext(...show); return; }
+      spliceNext(S(activePet() ? 'The judges are having a lie-down. Come back in a little while!' : 'The pet show needs a pet! Bring one along!')); } }]; }
   // ==== end v172 daily job ====
   // ==== v172 boss of the week (tools/blocks/v172_bossweek.js) ====
   // Panel after1: a boss of the week. Each week (from Monday) one of the area bosses you have beaten is the boss of the
